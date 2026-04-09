@@ -285,7 +285,7 @@ select
   end as percent_used,
   case
     when coalesce(a.actual_value, 0) > b.planned_value then 'OVERBUDGET'
-    when coalesce(a.actual_value, 0) >= b.planned_value * 0.9 then 'CRITICAL'
+    when coalesce(a.actual_value, 0) >= b.planned_value * 0.9 then 'HIGH_USAGE'
     when coalesce(a.actual_value, 0) >= b.planned_value * 0.7 then 'WARNING'
     else 'OK'
   end as status
@@ -318,7 +318,7 @@ select
   end as percent_used,
   case
     when gt.actual_value > gt.planned_value then 'OVERBUDGET'
-    when gt.actual_value >= gt.planned_value * 0.9 then 'CRITICAL'
+    when gt.actual_value >= gt.planned_value * 0.9 then 'HIGH_USAGE'
     when gt.actual_value >= gt.planned_value * 0.7 then 'WARNING'
     else 'OK'
   end as status
@@ -353,7 +353,7 @@ select
   end as percent_used,
   case
     when st.actual_value > st.planned_value then 'OVERBUDGET'
-    when st.actual_value >= st.planned_value * 0.9 then 'CRITICAL'
+    when st.actual_value >= st.planned_value * 0.9 then 'HIGH_USAGE'
     when st.actual_value >= st.planned_value * 0.7 then 'WARNING'
     else 'OK'
   end as status
@@ -516,14 +516,14 @@ grant select on public.vw_subgroup_cost_summary to anon, authenticated;
 --   sum(balance) as total_balance
 -- from public.vw_cost_analysis;
 
--- 5.2 Top 5 highest risk items (prioritize OVERBUDGET > CRITICAL > WARNING > OK)
+-- 5.2 Top 5 highest risk items (prioritize OVERBUDGET > HIGH_USAGE > WARNING > OK)
 -- select
 --   *
 -- from public.vw_cost_analysis
 -- order by
 --   case status
 --     when 'OVERBUDGET' then 4
---     when 'CRITICAL' then 3
+--     when 'HIGH_USAGE' then 3
 --     when 'WARNING' then 2
 --     else 1
 --   end desc,

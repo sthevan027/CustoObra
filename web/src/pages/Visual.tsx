@@ -4,6 +4,7 @@ import { formatBRL, parseBRLInput } from '../lib/money'
 import { replaceItemActualWithManualTotal } from '../lib/costs'
 import { getErrorMessage } from '../lib/supabaseError'
 import { compareGroup, compareItemCode } from '../lib/sort'
+import { statusLabelPt } from '../lib/statusLabels'
 
 type Activity = {
   item_id: number
@@ -204,7 +205,7 @@ export function Visual() {
                         />
                       </td>
                       <td className="border-b border-[var(--border)] px-2 py-2 text-xs text-[var(--muted)]">
-                        {act.status}
+                        {statusLabelPt(act.status)}
                       </td>
                     </tr>
 
@@ -253,7 +254,7 @@ export function Visual() {
                           />
                         </td>
                         <td className="border-b border-[var(--border)] px-2 py-1.5 text-xs text-[var(--muted)]">
-                          {r.status}
+                          {statusLabelPt(r.status)}
                         </td>
                       </tr>
                     ))}

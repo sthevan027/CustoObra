@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { T, V } from '../lib/db/catalog'
 import { formatBRL, parseBRLInput } from '../lib/money'
 import { replaceItemActualWithManualTotal } from '../lib/costs'
 import { getErrorMessage } from '../lib/supabaseError'
@@ -58,8 +59,8 @@ export function Visual() {
   const load = useCallback(async () => {
     setErr(null)
     const [a, b] = await Promise.all([
-      supabase.from('vw_activity_cost_analysis').select('*'),
-      supabase.from('vw_visual_dados').select('*'),
+      supabase.from(V.cost_activity_analysis).select('*'),
+      supabase.from(V.cost_visual_breakdown).select('*'),
     ])
     if (a.error) throw a.error
     if (b.error) throw b.error
@@ -90,7 +91,7 @@ export function Visual() {
     setSaving(`p-${itemId}`)
     setErr(null)
     const { error } = await supabase
-      .from('budgets')
+      .from(T.cost_budgets)
       .update({ planned_value: v })
       .eq('item_id', itemId)
     setSaving(null)
@@ -125,7 +126,7 @@ export function Visual() {
     setSaving(`sg-${subgroupId}`)
     setErr(null)
     const { error } = await supabase
-      .from('subgroups')
+      .from(T.cost_subgroups)
       .update({ name: raw.trim() })
       .eq('id', subgroupId)
     setSaving(null)
@@ -137,7 +138,7 @@ export function Visual() {
   }
 
   if (loading) {
-    return <p className="text-[var(--muted)]">Carregando planilha…</p>
+    return <p className="text-(--muted)">Carregando planilha…</p>
   }
 
   if (err && activities.length === 0) {
@@ -152,7 +153,7 @@ export function Visual() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">Visual — aba Dados</h1>
-        <p className="mt-1 text-sm text-[var(--muted)]">
+        <p className="mt-1 text-sm text-(--muted)">
           Mesma lógica do Excel: total por código (laranja) e linhas por grupo/subgrupo
           (Mão de Obra / Equipamento / Materiais). Edite previsto ou real e salve no botão
           ou Enter.
@@ -171,10 +172,10 @@ export function Visual() {
           const rows = byCode.get(code) ?? []
           return (
             <section key={act.item_id} className="min-w-[720px]">
-              <div className="overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--card)] shadow-sm">
+              <div className="overflow-hidden rounded-lg border border-(--border) bg-(--card) shadow-sm">
                 <table className="w-full border-collapse text-sm">
                   <thead>
-                    <tr className="border-b border-[var(--border)] bg-slate-100 dark:bg-slate-800">
+                    <tr className="border-b border-(--border) bg-slate-100 dark:bg-slate-800">
                       <th className="px-2 py-2 text-left font-semibold">Itens</th>
                       <th className="px-2 py-2 text-left font-semibold">Descrição / Sub-Grupo</th>
                       <th className="px-2 py-2 text-right font-semibold">Total previsto</th>
@@ -183,44 +184,44 @@ export function Visual() {
                     </tr>
                   </thead>
                   <tbody>
-                    <tr className="bg-[var(--row-orange)]">
-                      <td className="border-b border-[var(--border)] px-2 py-2 font-mono text-xs">
+                    <tr className="bg-(--row-orange)">
+                      <td className="border-b border-(--border) px-2 py-2 font-mono text-xs">
                         {act.item_code}
                       </td>
-                      <td className="border-b border-[var(--border)] px-2 py-2 font-medium">
+                      <td className="border-b border-(--border) px-2 py-2 font-medium">
                         {act.item_name}
                       </td>
-                      <td className="border-b border-[var(--border)] px-2 py-2 text-right align-top">
+                      <td className="border-b border-(--border) px-2 py-2 text-right align-top">
                         <InlineMoney
                           defaultValue={act.planned_value}
                           disabled={!!saving}
                           onSave={(v) => savePlanned(act.item_id, v)}
                         />
                       </td>
-                      <td className="border-b border-[var(--border)] px-2 py-2 text-right align-top">
+                      <td className="border-b border-(--border) px-2 py-2 text-right align-top">
                         <InlineMoney
                           defaultValue={act.actual_value}
                           disabled={!!saving}
                           onSave={(v) => saveActual(act.item_id, v)}
                         />
                       </td>
-                      <td className="border-b border-[var(--border)] px-2 py-2 text-xs text-[var(--muted)]">
+                      <td className="border-b border-(--border) px-2 py-2 text-xs text-(--muted)">
                         {statusLabelPt(act.status)}
                       </td>
                     </tr>
 
                     {rows.map((r) => (
                       <tr key={r.item_id} className="bg-white dark:bg-slate-900/40">
-                        <td className="border-b border-[var(--border)] px-2 py-1.5"></td>
-                        <td className="border-b border-[var(--border)] px-2 py-1.5">
+                        <td className="border-b border-(--border) px-2 py-1.5"></td>
+                        <td className="border-b border-(--border) px-2 py-1.5">
                           <div className="text-xs font-semibold text-blue-800 dark:text-blue-300">
                             {r.group_name}
                           </div>
                           <div className="mt-0.5 flex flex-wrap items-center gap-2">
-                            <span className="text-[var(--muted)]">Sub:</span>
+                            <span className="text-(--muted)">Sub:</span>
                             <input
                               defaultValue={r.subgroup_name ?? ''}
-                              className="max-w-[280px] flex-1 rounded border border-[var(--border)] bg-[var(--card)] px-2 py-1 text-sm"
+                              className="max-w-[280px] flex-1 rounded border border-(--border) bg-(--card) px-2 py-1 text-sm"
                               disabled={r.subgroup_id == null || !!saving}
                               onKeyDown={(e) => {
                                 if (e.key === 'Enter') {
@@ -235,25 +236,25 @@ export function Visual() {
                               }}
                             />
                           </div>
-                          <div className="mt-1 text-xs text-[var(--muted)] line-clamp-2">
+                          <div className="mt-1 text-xs text-(--muted) line-clamp-2">
                             {r.item_name}
                           </div>
                         </td>
-                        <td className="border-b border-[var(--border)] px-2 py-1.5 text-right align-top">
+                        <td className="border-b border-(--border) px-2 py-1.5 text-right align-top">
                           <InlineMoney
                             defaultValue={r.planned_value}
                             disabled={!!saving}
                             onSave={(v) => savePlanned(r.item_id, v)}
                           />
                         </td>
-                        <td className="border-b border-[var(--border)] px-2 py-1.5 text-right align-top">
+                        <td className="border-b border-(--border) px-2 py-1.5 text-right align-top">
                           <InlineMoney
                             defaultValue={r.actual_value}
                             disabled={!!saving}
                             onSave={(v) => saveActual(r.item_id, v)}
                           />
                         </td>
-                        <td className="border-b border-[var(--border)] px-2 py-1.5 text-xs text-[var(--muted)]">
+                        <td className="border-b border-(--border) px-2 py-1.5 text-xs text-(--muted)">
                           {statusLabelPt(r.status)}
                         </td>
                       </tr>
@@ -287,7 +288,7 @@ function InlineMoney({
   return (
     <div className="flex flex-col items-end gap-1 sm:flex-row sm:items-center sm:justify-end">
       <input
-        className="w-full min-w-[120px] max-w-[160px] rounded border border-[var(--border)] bg-[var(--card)] px-2 py-1 text-right text-sm tabular-nums"
+        className="w-full min-w-[120px] max-w-[160px] rounded border border-(--border) bg-(--card) px-2 py-1 text-right text-sm tabular-nums"
         value={val}
         disabled={disabled}
         onChange={(e) => setVal(e.target.value)}

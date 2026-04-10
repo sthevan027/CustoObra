@@ -1,29 +1,32 @@
 @import "tailwindcss";
 
 :root {
-  --app-bg: #f8f9fb;
-  --card: #ffffff;
-  --border: #e2e8f0;
-  --text: #1e293b;
-  --muted: #64748b;
-  --accent: #2563eb;
-  --accent-soft: #eff6ff;
-  --row-orange: #fff7ed;
-  --row-blue: #eff6ff;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --app-bg: #0f172a;
-    --card: #1e293b;
-    --border: #334155;
-    --text: #f1f5f9;
-    --muted: #94a3b8;
-    --accent: #60a5fa;
-    --accent-soft: #1e3a5f;
-    --row-orange: #422006;
-    --row-blue: #172554;
-  }
+  --app-bg: #000000;
+  --card: #121212;
+  --border: #2a2a2a;
+  --text: #fafafa;
+  --muted: #a1a1aa;
+  --accent: #3b82f6;
+  --accent-soft: rgba(59, 130, 246, 0.14);
+  --accent-hover: #60a5fa;
+  --nav-hover: rgba(255, 255, 255, 0.06);
+  --input-bg: #141414;
+  --chart-planned: #3b82f6;
+  --chart-actual: #ef4444;
+  --donut-mo: #60a5fa;
+  --donut-eq: #2dd4bf;
+  --donut-mat: #fbbf24;
+  --chart-bar-track: #27272a;
+  --chart-grid-line: rgba(255, 255, 255, 0.1);
+  --chart-value-box-bg: #e5e5e5;
+  --chart-value-text: #111827;
+  --category-orange: #fbbf24;
+  --row-orange: #1c1410;
+  --row-blue: #0f1729;
+  --table-header-bg: #0c0c0c;
+  --table-footer-bg: #161616;
+  --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 24px rgba(0, 0, 0, 0.45);
+  color-scheme: dark;
 }
 
 body {
@@ -31,7 +34,13 @@ body {
   min-height: 100vh;
   background: var(--app-bg);
   color: var(--text);
-  font-family: system-ui, "Segoe UI", Roboto, sans-serif;
+  font-family:
+    "Inter",
+    system-ui,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
 #root {
@@ -46,4 +55,9 @@ input[type="text"],
 select,
 textarea {
   color: inherit;
+}
+
+.chart-value-inset {
+  background: var(--chart-value-box-bg);
+  color: var(--chart-value-text);
 }

@@ -10,6 +10,15 @@ export type SubgroupChartBar = {
   actual_value: number;
 };
 
+export type EqBucketKey =
+  | "onibus"
+  | "carros"
+  | "guindaste"
+  | "munck"
+  | "maquinas"
+  | "container"
+  | "outros";
+
 function fold(s: string): string {
   return s
     .normalize("NFKD")
@@ -27,16 +36,31 @@ function sumPair(rows: SubgroupRow[]): { p: number; a: number } {
   return { p, a };
 }
 
-function classifyEquip(sub: string): "onibus" | "guindaste" | "munck" | "maquinas" | "outros" {
+/** Agrupa linhas de equipamento por palavras-chave do subgrupo. */
+export function classifyEquip(sub: string): EqBucketKey {
   const t = fold(sub);
   if (t.includes("onibus") || t.includes("nibus")) return "onibus";
   if (t.includes("munck")) return "munck";
   if (t.includes("guindaste")) return "guindaste";
-  if (t.includes("maquina") && t.includes("pesad")) return "maquinas";
+  if (t.includes("container") || (t.includes("cont") && t.includes("iner")))
+    return "container";
+  if (t.includes("maq") && t.includes("pesad")) return "maquinas";
+  if (
+    t.includes("carro") ||
+    t.includes("leve") ||
+    t.includes("veiculo") ||
+    t.includes("veículo")
+  )
+    return "carros";
   return "outros";
 }
 
-function classifyMat(sub: string): "ferramental" | "consumiveis" | "andaime" | "cacamba" | "outros" {
+function classifyMat(sub: string):
+  | "ferramental"
+  | "consumiveis"
+  | "andaime"
+  | "cacamba"
+  | "outros" {
   const t = fold(sub);
   if (t.includes("ferramental")) return "ferramental";
   if (t.includes("consumivel") || t.includes("consumi")) return "consumiveis";
@@ -45,24 +69,86 @@ function classifyMat(sub: string): "ferramental" | "consumiveis" | "andaime" | "
   return "outros";
 }
 
+/** Soma prevista por grupo (para donut de distribuição). */
+export function buildCostDistributionTriplet(rows: SubgroupRow[]): {
+  mo: number;
+  eq: number;
+  mat: number;
+} {
+  let mo = 0;
+  let eq = 0;
+  let mat = 0;
+  for (const r of rows) {
+    const v = Number(r.planned_value);
+    if (r.group_name === "Mão de Obra") mo += v;
+    else if (r.group_name === "Equipamento") eq += v;
+    else if (r.group_name === "Materiais") mat += v;
+  }
+  return { mo, eq, mat };
+}
+
+/**
+ * Apenas equipamento, ordem fixa (alinhada ao layout “Custos por Equipamento”).
+ */
+export function buildEquipmentHorizontalSeries(
+  rows: SubgroupRow[],
+): SubgroupChartBar[] {
+  const eq = rows.filter((r) => r.group_name === "Equipamento");
+  const eqBuckets: Record<EqBucketKey, SubgroupRow[]> = {
+    onibus: [],
+    carros: [],
+    guindaste: [],
+    munck: [],
+    maquinas: [],
+    container: [],
+    outros: [],
+  };
+  for (const r of eq) {
+    eqBuckets[classifyEquip(r.subgroup_name)].push(r);
+  }
+
+  const eqOrder: { key: EqBucketKey; label: string; full: string }[] = [
+    { key: "onibus", label: "Ônibus", full: "Equipamento — Ônibus" },
+    { key: "carros", label: "Carros Leve", full: "Equipamento — Carros leves" },
+    {
+      key: "maquinas",
+      label: "Máquinas Pesadas",
+      full: "Equipamento — Máquinas pesadas",
+    },
+    { key: "outros", label: "Outros", full: "Equipamento — Outros" },
+    { key: "container", label: "Contêiner", full: "Equipamento — Contêiner" },
+    { key: "munck", label: "Munck", full: "Equipamento — Munck" },
+    { key: "guindaste", label: "Guindaste", full: "Equipamento — Guindaste" },
+  ];
+
+  return eqOrder.map((d) => {
+    const s = sumPair(eqBuckets[d.key]);
+    return {
+      id: `eq-h-${d.key}`,
+      label: d.label,
+      fullLabel: d.full,
+      planned_value: s.p,
+      actual_value: s.a,
+    };
+  });
+}
+
 /**
  * Série fixa para o gráfico de custos por subgrupo:
- * Mão de Obra → Equipamento (ônibus, guindaste, munck, máquinas pesadas, outros)
- * → Materiais (ferramental, consumíveis, andaime, caçamba, outros).
+ * Mão de Obra → Equipamento (buckets) → Materiais.
  */
 export function buildSubgroupChartSeries(rows: SubgroupRow[]): SubgroupChartBar[] {
   const mo = rows.filter((r) => r.group_name === "Mão de Obra");
   const eq = rows.filter((r) => r.group_name === "Equipamento");
   const mat = rows.filter((r) => r.group_name === "Materiais");
 
-  const eqBuckets: Record<
-    "onibus" | "guindaste" | "munck" | "maquinas" | "outros",
-    SubgroupRow[]
-  > = {
+  const eqBuckets: Record<EqBucketKey, SubgroupRow[]> = {
     onibus: [],
+    carros: [],
     guindaste: [],
     munck: [],
     maquinas: [],
+    container: [],
     outros: [],
   };
   for (const r of eq) {
@@ -95,19 +181,21 @@ export function buildSubgroupChartSeries(rows: SubgroupRow[]): SubgroupChartBar[
   ];
 
   const eqDefs: {
-    key: keyof typeof eqBuckets;
+    key: EqBucketKey;
     label: string;
     full: string;
   }[] = [
     { key: "onibus", label: "Ônibus", full: "Equipamento — Ônibus" },
-    { key: "guindaste", label: "Guindaste", full: "Equipamento — Guindaste(s)" },
-    { key: "munck", label: "Munck", full: "Equipamento — Munck" },
+    { key: "carros", label: "Carros Leve", full: "Equipamento — Carros leves" },
     {
       key: "maquinas",
       label: "Máq. pesadas",
       full: "Equipamento — Máquinas pesadas",
     },
     { key: "outros", label: "Outros (EQ)", full: "Equipamento — Outros" },
+    { key: "container", label: "Contêiner", full: "Equipamento — Contêiner" },
+    { key: "munck", label: "Munck", full: "Equipamento — Munck" },
+    { key: "guindaste", label: "Guindaste", full: "Equipamento — Guindaste" },
   ];
   for (const d of eqDefs) {
     const s = sumPair(eqBuckets[d.key]);

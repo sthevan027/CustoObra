@@ -1,9 +1,8 @@
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet } from "react-router-dom";
 
 const link =
-  'rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-(--accent-soft)'
-const active =
-  'bg-(--accent-soft) text-(--accent) ring-1 ring-(--accent)/30'
+  "rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-(--accent-soft)";
+const active = "bg-(--accent-soft) text-(--accent) ring-1 ring-(--accent)/30";
 
 export function Layout() {
   return (
@@ -22,25 +21,33 @@ export function Layout() {
             <NavLink
               to="/"
               end
-              className={({ isActive }) => (isActive ? `${link} ${active}` : link)}
+              className={({ isActive }) =>
+                isActive ? `${link} ${active}` : link
+              }
             >
               Dashboard
             </NavLink>
             <NavLink
               to="/visual"
-              className={({ isActive }) => (isActive ? `${link} ${active}` : link)}
+              className={({ isActive }) =>
+                isActive ? `${link} ${active}` : link
+              }
             >
-              Visual (Dados)
+              Visualizador
             </NavLink>
             <NavLink
               to="/lancamentos"
-              className={({ isActive }) => (isActive ? `${link} ${active}` : link)}
+              className={({ isActive }) =>
+                isActive ? `${link} ${active}` : link
+              }
             >
               Lançamentos
             </NavLink>
             <NavLink
               to="/historico"
-              className={({ isActive }) => (isActive ? `${link} ${active}` : link)}
+              className={({ isActive }) =>
+                isActive ? `${link} ${active}` : link
+              }
             >
               Histórico
             </NavLink>
@@ -51,5 +58,5 @@ export function Layout() {
         <Outlet />
       </main>
     </div>
-  )
+  );
 }

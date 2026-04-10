@@ -154,12 +154,7 @@ export function Visual() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">Visual — aba Dados</h1>
-        <p className="mt-1 text-sm text-(--muted)">
-          Mesma lógica do Excel: total por código (laranja) e linhas por
-          grupo/subgrupo (Mão de Obra / Equipamento / Materiais). Edite previsto
-          ou real e salve no botão ou Enter.
-        </p>
+        <h1 className="text-2xl font-semibold">Visualização de Dados</h1>
       </div>
 
       {err && (

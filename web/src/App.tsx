@@ -1,9 +1,9 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
-import { Layout } from './components/Layout'
-import { Dashboard } from './pages/Dashboard'
-import { Historico } from './pages/Historico'
-import { Lancamentos } from './pages/Lancamentos'
-import { Visual } from './pages/Visual'
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { Layout } from "./components/Layout";
+import { Dashboard } from "./pages/Dashboard";
+import { Historico } from "./pages/Historico";
+import { Lancamentos } from "./pages/Lancamentos";
+import { Visual } from "./pages/Visualizador";
 
 export default function App() {
   return (
@@ -18,5 +18,5 @@ export default function App() {
         </Route>
       </Routes>
     </BrowserRouter>
-  )
+  );
 }

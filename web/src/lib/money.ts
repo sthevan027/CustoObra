@@ -27,6 +27,14 @@ export function formatBRLAxis(n: number): string {
   return formatBRL(n);
 }
 
+/** Formata número para o campo de valor (sem símbolo R$, apenas dígitos pt-BR). */
+export function formatBRLDecimalField(n: number): string {
+  return new Intl.NumberFormat("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(n);
+}
+
 export function parseBRLInput(s: string): number | null {
   const t = s
     .trim()

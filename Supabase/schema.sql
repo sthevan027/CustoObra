@@ -458,6 +458,7 @@ drop policy if exists "jl_anon_all_budgets" on public.cost_budgets;
 drop policy if exists "jl_anon_all_cost_entries" on public.cost_entries;
 drop policy if exists "jl_anon_select_cost_entries_audit" on public.cost_entries_audit;
 drop policy if exists "jl_anon_insert_cost_entries_audit" on public.cost_entries_audit;
+drop policy if exists "jl_anon_delete_cost_entries_audit" on public.cost_entries_audit;
 drop policy if exists "jl_anon_update_subgroups" on public.cost_subgroups;
 
 create policy "jl_anon_select_groups"
@@ -481,6 +482,9 @@ create policy "jl_anon_select_cost_entries_audit"
 create policy "jl_anon_insert_cost_entries_audit"
   on public.cost_entries_audit for insert with check (true);
 
+create policy "jl_anon_delete_cost_entries_audit"
+  on public.cost_entries_audit for delete using (true);
+
 create policy "jl_anon_update_subgroups"
   on public.cost_subgroups for update using (true) with check (true);
 
@@ -496,3 +500,5 @@ grant select on public.vw_cost_item_lookup to anon, authenticated;
 grant select on public.vw_cost_visual_breakdown to anon, authenticated;
 grant select on public.vw_cost_subgroup_summary to anon, authenticated;
 grant select on public.vw_cost_audit_enriched to anon, authenticated;
+
+grant delete on table public.cost_entries_audit to anon, authenticated;

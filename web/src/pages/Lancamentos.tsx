@@ -114,7 +114,9 @@ export function Lancamentos() {
   }, []);
 
   useEffect(() => {
-    void loadRecentEntries();
+    (async () => {
+      await loadRecentEntries();
+    })();
   }, [loadRecentEntries]);
 
   const groupsOrdered = useMemo(() => {
@@ -315,10 +317,6 @@ export function Lancamentos() {
         <h1 className="mt-1.5 text-2xl font-semibold tracking-tight text-(--text)">
           Lançamentos
         </h1>
-        <p className="mt-2 max-w-3xl text-sm leading-relaxed text-(--muted)">
-          Registre custos por item ou por grupo; o rateio por grupo segue a
-          proporção do orçamento de cada linha.
-        </p>
       </header>
 
       {err && (

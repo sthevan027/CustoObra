@@ -18,6 +18,7 @@ export const V = {
   cost_group_summary: 'vw_cost_group_summary',
   cost_subgroup_summary: 'vw_cost_subgroup_summary',
   cost_activity_analysis: 'vw_cost_activity_analysis',
+  cost_contract_only_items: 'vw_cost_contract_only_items',
   cost_monthly_group_actuals: 'vw_cost_monthly_group_actuals',
   cost_monthly_total_actuals: 'vw_cost_monthly_total_actuals',
   cost_item_lookup: 'vw_cost_item_lookup',

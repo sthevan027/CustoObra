@@ -1,142 +1,150 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
-import { T, V } from '../lib/db/catalog'
-import { distributeAmountByWeights, formatBRL, parseBRLInput } from '../lib/money'
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { supabase } from "../lib/supabase";
+import { T, V } from "../lib/db/catalog";
+import {
+  distributeAmountByWeights,
+  formatBRL,
+  parseBRLInput,
+} from "../lib/money";
 
 type Lookup = {
-  item_id: number
-  item_code: string | null
-  item_name: string
-  group_name: string
-  subgroup_name: string | null
-  planned_value: number | string
-}
+  item_id: number;
+  item_code: string | null;
+  item_name: string;
+  group_name: string;
+  subgroup_name: string | null;
+  planned_value: number | string;
+};
 
-type Mode = 'item' | 'group'
+type Mode = "item" | "group";
 
 const field =
-  'mt-2 w-full rounded-xl border border-(--border) bg-(--card) px-3.5 py-2.5 text-sm shadow-sm transition-[box-shadow,border-color] placeholder:text-(--muted)/70 focus:border-(--accent)/40 focus:outline-none focus:ring-[3px] focus:ring-(--accent)/15'
+  "mt-2 w-full rounded-xl border border-(--border) bg-(--card) px-3.5 py-2.5 text-sm shadow-sm transition-[box-shadow,border-color] placeholder:text-(--muted)/70 focus:border-(--accent)/40 focus:outline-none focus:ring-[3px] focus:ring-(--accent)/15";
 
 export function Lancamentos() {
-  const [items, setItems] = useState<Lookup[]>([])
-  const [mode, setMode] = useState<Mode>('item')
-  const [groupFilter, setGroupFilter] = useState<string>('')
-  const [groupForBatch, setGroupForBatch] = useState<string>('')
-  const [itemId, setItemId] = useState<number | ''>('')
+  const [items, setItems] = useState<Lookup[]>([]);
+  const [mode, setMode] = useState<Mode>("item");
+  const [groupFilter, setGroupFilter] = useState<string>("");
+  const [groupForBatch, setGroupForBatch] = useState<string>("");
+  const [itemId, setItemId] = useState<number | "">("");
   const [costDate, setCostDate] = useState(() =>
-    new Date().toISOString().slice(0, 10)
-  )
-  const [amountStr, setAmountStr] = useState('')
-  const [description, setDescription] = useState('')
-  const [msg, setMsg] = useState<string | null>(null)
-  const [err, setErr] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
+    new Date().toISOString().slice(0, 10),
+  );
+  const [amountStr, setAmountStr] = useState("");
+  const [description, setDescription] = useState("");
+  const [msg, setMsg] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    ;(async () => {
-      setErr(null)
+    (async () => {
+      setErr(null);
       const { data, error } = await supabase
         .from(V.cost_item_lookup)
-        .select('*')
-        .order('group_name')
-        .order('item_code')
+        .select("*")
+        .order("group_name")
+        .order("item_code");
       if (error) {
-        setErr(error.message)
-        setLoading(false)
-        return
+        setErr(error.message);
+        setLoading(false);
+        return;
       }
-      setItems((data ?? []) as Lookup[])
-      setLoading(false)
-    })()
-  }, [])
+      setItems((data ?? []) as Lookup[]);
+      setLoading(false);
+    })();
+  }, []);
 
   const groupsOrdered = useMemo(() => {
-    const s = new Set<string>()
-    for (const r of items) s.add(r.group_name)
-    return [...s].sort((a, b) => a.localeCompare(b, 'pt-BR'))
-  }, [items])
+    const s = new Set<string>();
+    for (const r of items) s.add(r.group_name);
+    return [...s].sort((a, b) => a.localeCompare(b, "pt-BR"));
+  }, [items]);
 
   const itemsFiltered = useMemo(() => {
-    if (!groupFilter) return items
-    return items.filter((r) => r.group_name === groupFilter)
-  }, [items, groupFilter])
+    if (!groupFilter) return items;
+    return items.filter((r) => r.group_name === groupFilter);
+  }, [items, groupFilter]);
 
   const itemsInSelectedGroup = useMemo(() => {
-    if (!groupForBatch) return []
-    return items.filter((r) => r.group_name === groupForBatch)
-  }, [items, groupForBatch])
+    if (!groupForBatch) return [];
+    return items.filter((r) => r.group_name === groupForBatch);
+  }, [items, groupForBatch]);
 
   const groupPlannedTotal = useMemo(() => {
-    return itemsInSelectedGroup.reduce((s, r) => s + Number(r.planned_value), 0)
-  }, [itemsInSelectedGroup])
+    return itemsInSelectedGroup.reduce(
+      (s, r) => s + Number(r.planned_value),
+      0,
+    );
+  }, [itemsInSelectedGroup]);
 
   const selectedItem = useMemo(() => {
-    if (itemId === '') return null
-    return items.find((r) => r.item_id === itemId) ?? null
-  }, [items, itemId])
+    if (itemId === "") return null;
+    return items.find((r) => r.item_id === itemId) ?? null;
+  }, [items, itemId]);
 
   useEffect(() => {
-    if (mode === 'item' && itemId !== '') {
-      const still = itemsFiltered.some((r) => r.item_id === itemId)
-      if (!still) setItemId('')
+    if (mode === "item" && itemId !== "") {
+      const still = itemsFiltered.some((r) => r.item_id === itemId);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (!still) setItemId("");
     }
-  }, [itemsFiltered, itemId, mode])
+  }, [itemsFiltered, itemId, mode]);
 
   async function submit(e: React.FormEvent) {
-    e.preventDefault()
-    setMsg(null)
-    setErr(null)
+    e.preventDefault();
+    setMsg(null);
+    setErr(null);
 
-    const amount = parseBRLInput(amountStr)
+    const amount = parseBRLInput(amountStr);
     if (amount == null || amount < 0) {
-      setErr('Informe um valor válido.')
-      return
+      setErr("Informe um valor válido.");
+      return;
     }
 
-    if (mode === 'item') {
-      if (itemId === '') {
-        setErr('Selecione um item.')
-        return
+    if (mode === "item") {
+      if (itemId === "") {
+        setErr("Selecione um item.");
+        return;
       }
-      setSaving(true)
+      setSaving(true);
       const { error } = await supabase.from(T.cost_entries).insert({
         item_id: itemId as number,
         cost_date: costDate,
         amount,
         description: description.trim() || null,
         external_id: `UI-${Date.now()}`,
-      })
-      setSaving(false)
+      });
+      setSaving(false);
       if (error) {
-        setErr(error.message)
-        return
+        setErr(error.message);
+        return;
       }
-      setMsg('Registrado com sucesso.')
-      setAmountStr('')
-      setDescription('')
-      return
+      setMsg("Registrado com sucesso.");
+      setAmountStr("");
+      setDescription("");
+      return;
     }
 
     if (!groupForBatch) {
-      setErr('Selecione um grupo.')
-      return
+      setErr("Selecione um grupo.");
+      return;
     }
-    const list = itemsInSelectedGroup
+    const list = itemsInSelectedGroup;
     if (list.length === 0) {
-      setErr('Não há itens com orçamento neste grupo.')
-      return
+      setErr("Não há itens com orçamento neste grupo.");
+      return;
     }
-    const weights = list.map((r) => Number(r.planned_value))
+    const weights = list.map((r) => Number(r.planned_value));
     if (weights.every((w) => w <= 0)) {
-      setErr('O orçamento do grupo está zerado — não é possível distribuir.')
-      return
+      setErr("O orçamento do grupo está zerado — não é possível distribuir.");
+      return;
     }
 
-    setSaving(true)
-    const parts = distributeAmountByWeights(amount, weights)
-    const ts = Date.now()
+    setSaving(true);
+    const parts = distributeAmountByWeights(amount, weights);
+    const ts = Date.now();
     const rows = list.map((r, i) => ({
       item_id: r.item_id,
       cost_date: costDate,
@@ -145,17 +153,17 @@ export function Lancamentos() {
         ? `${description.trim()} (grupo ${groupForBatch})`
         : `Rateio grupo ${groupForBatch}`,
       external_id: `UI-G-${ts}-${i}-${r.item_id}`,
-    }))
+    }));
 
-    const { error } = await supabase.from(T.cost_entries).insert(rows)
-    setSaving(false)
+    const { error } = await supabase.from(T.cost_entries).insert(rows);
+    setSaving(false);
     if (error) {
-      setErr(error.message)
-      return
+      setErr(error.message);
+      return;
     }
-    setMsg(`Distribuído em ${list.length} itens · ${formatBRL(amount)}`)
-    setAmountStr('')
-    setDescription('')
+    setMsg(`Distribuído em ${list.length} itens · ${formatBRL(amount)}`);
+    setAmountStr("");
+    setDescription("");
   }
 
   if (loading) {
@@ -167,7 +175,7 @@ export function Lancamentos() {
         />
         <p className="text-sm text-(--muted)">Carregando itens…</p>
       </div>
-    )
+    );
   }
 
   return (
@@ -177,8 +185,8 @@ export function Lancamentos() {
           Lançamentos
         </h1>
         <p className="mt-2 max-w-md text-sm leading-relaxed text-(--muted)">
-          Informe competência e valor. Você pode lançar em um item ou dividir o valor pelo grupo,
-          na proporção do orçamento.
+          Informe competência e valor. Você pode lançar em um item ou dividir o
+          valor pelo grupo, na proporção do orçamento.
         </p>
       </header>
 
@@ -207,26 +215,26 @@ export function Lancamentos() {
         <button
           type="button"
           role="tab"
-          aria-selected={mode === 'item'}
+          aria-selected={mode === "item"}
           className={`flex-1 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
-            mode === 'item'
-              ? 'bg-(--card) text-(--text) shadow-sm ring-1 ring-(--border)'
-              : 'text-(--muted) hover:text-(--text)'
+            mode === "item"
+              ? "bg-(--card) text-(--text) shadow-sm ring-1 ring-(--border)"
+              : "text-(--muted) hover:text-(--text)"
           }`}
-          onClick={() => setMode('item')}
+          onClick={() => setMode("item")}
         >
           Um item
         </button>
         <button
           type="button"
           role="tab"
-          aria-selected={mode === 'group'}
+          aria-selected={mode === "group"}
           className={`flex-1 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
-            mode === 'group'
-              ? 'bg-(--card) text-(--text) shadow-sm ring-1 ring-(--border)'
-              : 'text-(--muted) hover:text-(--text)'
+            mode === "group"
+              ? "bg-(--card) text-(--text) shadow-sm ring-1 ring-(--border)"
+              : "text-(--muted) hover:text-(--text)"
           }`}
-          onClick={() => setMode('group')}
+          onClick={() => setMode("group")}
         >
           Por grupo
         </button>
@@ -234,12 +242,15 @@ export function Lancamentos() {
 
       <form
         onSubmit={submit}
-        className="space-y-7 rounded-2xl border border-(--border) bg-(--card) p-7 shadow-sm ring-1 ring-black/[0.02] dark:ring-white/[0.04]"
+        className="space-y-7 rounded-2xl border border-(--border) bg-(--card) p-7 shadow-sm ring-1 ring-black/2 dark:ring-white/4"
       >
-        {mode === 'item' && (
+        {mode === "item" && (
           <div className="space-y-5">
             <div>
-              <label htmlFor="lanc-grupo-filtro" className="text-sm font-medium text-(--text)">
+              <label
+                htmlFor="lanc-grupo-filtro"
+                className="text-sm font-medium text-(--text)"
+              >
                 Grupo
               </label>
               <select
@@ -257,31 +268,34 @@ export function Lancamentos() {
               </select>
             </div>
             <div>
-              <label htmlFor="lanc-item" className="text-sm font-medium text-(--text)">
+              <label
+                htmlFor="lanc-item"
+                className="text-sm font-medium text-(--text)"
+              >
                 Item
               </label>
               <select
                 id="lanc-item"
                 className={field}
-                value={itemId === '' ? '' : String(itemId)}
+                value={itemId === "" ? "" : String(itemId)}
                 onChange={(e) =>
-                  setItemId(e.target.value ? Number(e.target.value) : '')
+                  setItemId(e.target.value ? Number(e.target.value) : "")
                 }
                 required
               >
                 <option value="">Escolha um item…</option>
                 {itemsFiltered.map((r) => (
                   <option key={r.item_id} value={r.item_id}>
-                    {r.item_code ?? '—'} · {r.group_name} / {r.subgroup_name ?? '—'} —{' '}
-                    {r.item_name.slice(0, 72)}
-                    {r.item_name.length > 72 ? '…' : ''}
+                    {r.item_code ?? "—"} · {r.group_name} /{" "}
+                    {r.subgroup_name ?? "—"} — {r.item_name.slice(0, 72)}
+                    {r.item_name.length > 72 ? "…" : ""}
                   </option>
                 ))}
               </select>
             </div>
             {selectedItem && (
               <div className="rounded-xl bg-slate-50/90 px-3.5 py-3 text-xs leading-relaxed text-(--muted) dark:bg-slate-800/50">
-                <span className="text-(--text)">Orçamento do item:</span>{' '}
+                <span className="text-(--text)">Orçamento do item:</span>{" "}
                 <span className="tabular-nums font-medium text-(--text)">
                   {formatBRL(Number(selectedItem.planned_value))}
                 </span>
@@ -290,10 +304,13 @@ export function Lancamentos() {
           </div>
         )}
 
-        {mode === 'group' && (
+        {mode === "group" && (
           <div className="space-y-3">
             <div>
-              <label htmlFor="lanc-grupo-rateio" className="text-sm font-medium text-(--text)">
+              <label
+                htmlFor="lanc-grupo-rateio"
+                className="text-sm font-medium text-(--text)"
+              >
                 Grupo para rateio
               </label>
               <select
@@ -313,12 +330,15 @@ export function Lancamentos() {
             </div>
             {groupForBatch ? (
               <p className="rounded-xl bg-slate-50/90 px-3.5 py-3 text-xs leading-relaxed text-(--muted) dark:bg-slate-800/50">
-                <span className="text-(--text)">{itemsInSelectedGroup.length}</span> itens · orçamento do grupo{' '}
+                <span className="text-(--text)">
+                  {itemsInSelectedGroup.length}
+                </span>{" "}
+                itens · orçamento do grupo{" "}
                 <span className="tabular-nums font-medium text-(--text)">
                   {formatBRL(groupPlannedTotal)}
                 </span>
-                <br />
-                O valor será repartido na mesma proporção do orçamento de cada linha.
+                <br />O valor será repartido na mesma proporção do orçamento de
+                cada linha.
               </p>
             ) : null}
           </div>
@@ -330,7 +350,10 @@ export function Lancamentos() {
           </p>
           <div className="space-y-5">
             <div>
-              <label htmlFor="lanc-data" className="text-sm font-medium text-(--text)">
+              <label
+                htmlFor="lanc-data"
+                className="text-sm font-medium text-(--text)"
+              >
                 Competência
               </label>
               <input
@@ -343,7 +366,10 @@ export function Lancamentos() {
               />
             </div>
             <div>
-              <label htmlFor="lanc-valor" className="text-sm font-medium text-(--text)">
+              <label
+                htmlFor="lanc-valor"
+                className="text-sm font-medium text-(--text)"
+              >
                 Valor
               </label>
               <div className="relative mt-2">
@@ -363,8 +389,12 @@ export function Lancamentos() {
               </div>
             </div>
             <div>
-              <label htmlFor="lanc-desc" className="text-sm font-medium text-(--text)">
-                Observação <span className="font-normal text-(--muted)">(opcional)</span>
+              <label
+                htmlFor="lanc-desc"
+                className="text-sm font-medium text-(--text)"
+              >
+                Observação{" "}
+                <span className="font-normal text-(--muted)">(opcional)</span>
               </label>
               <input
                 id="lanc-desc"
@@ -383,12 +413,16 @@ export function Lancamentos() {
           disabled={saving}
           className="w-full rounded-xl bg-(--accent) px-4 py-3.5 text-sm font-medium text-white shadow-sm transition-[opacity,transform] hover:opacity-[0.97] active:scale-[0.99] disabled:pointer-events-none disabled:opacity-50"
         >
-          {saving ? 'Salvando…' : mode === 'group' ? 'Distribuir e registrar' : 'Registrar lançamento'}
+          {saving
+            ? "Salvando…"
+            : mode === "group"
+              ? "Distribuir e registrar"
+              : "Registrar lançamento"}
         </button>
       </form>
 
       <p className="mt-8 text-center text-xs leading-relaxed text-(--muted)">
-        Para editar orçamentos linha a linha, abra{' '}
+        Para editar orçamentos linha a linha, abra{" "}
         <Link
           to="/visual"
           className="font-medium text-(--accent) underline-offset-4 hover:underline"
@@ -398,5 +432,5 @@ export function Lancamentos() {
         .
       </p>
     </div>
-  )
+  );
 }

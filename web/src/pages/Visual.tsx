@@ -1,144 +1,146 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { supabase } from '../lib/supabase'
-import { T, V } from '../lib/db/catalog'
-import { formatBRL, parseBRLInput } from '../lib/money'
-import { replaceItemActualWithManualTotal } from '../lib/costs'
-import { getErrorMessage } from '../lib/supabaseError'
-import { compareGroup, compareItemCode } from '../lib/sort'
-import { statusLabelPt } from '../lib/statusLabels'
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { supabase } from "../lib/supabase";
+import { T, V } from "../lib/db/catalog";
+import { formatBRL, parseBRLInput } from "../lib/money";
+import { replaceItemActualWithManualTotal } from "../lib/costs";
+import { getErrorMessage } from "../lib/supabaseError";
+import { compareGroup, compareItemCode } from "../lib/sort";
+import { statusLabelPt } from "../lib/statusLabels";
 
 type Activity = {
-  item_id: number
-  item_name: string
-  planned_value: number
-  actual_value: number
-  balance: number
-  percent_used: number | null
-  status: string
-  item_code: string | null
-}
+  item_id: number;
+  item_name: string;
+  planned_value: number;
+  actual_value: number;
+  balance: number;
+  percent_used: number | null;
+  status: string;
+  item_code: string | null;
+};
 
 type Breakdown = {
-  item_id: number
-  item_name: string
-  group_name: string
-  item_code: string | null
-  subgroup_id: number | null
-  subgroup_name: string | null
-  planned_value: number
-  actual_value: number
-  balance: number
-  percent_used: number | null
-  status: string
-}
+  item_id: number;
+  item_name: string;
+  group_name: string;
+  item_code: string | null;
+  subgroup_id: number | null;
+  subgroup_name: string | null;
+  planned_value: number;
+  actual_value: number;
+  balance: number;
+  percent_used: number | null;
+  status: string;
+};
 
 export function Visual() {
-  const [activities, setActivities] = useState<Activity[]>([])
-  const [breakdown, setBreakdown] = useState<Breakdown[]>([])
-  const [err, setErr] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState<string | null>(null)
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [breakdown, setBreakdown] = useState<Breakdown[]>([]);
+  const [err, setErr] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState<string | null>(null);
 
   const byCode = useMemo(() => {
-    const m = new Map<string, Breakdown[]>()
+    const m = new Map<string, Breakdown[]>();
     for (const b of breakdown) {
-      const c = b.item_code ?? ''
-      if (!m.has(c)) m.set(c, [])
-      m.get(c)!.push(b)
+      const c = b.item_code ?? "";
+      if (!m.has(c)) m.set(c, []);
+      m.get(c)!.push(b);
     }
     for (const [, arr] of m) {
       arr.sort(
         (a, b) =>
           compareGroup(a.group_name, b.group_name) ||
-          (a.subgroup_name ?? '').localeCompare(b.subgroup_name ?? '', 'pt-BR')
-      )
+          (a.subgroup_name ?? "").localeCompare(b.subgroup_name ?? "", "pt-BR"),
+      );
     }
-    return m
-  }, [breakdown])
+    return m;
+  }, [breakdown]);
 
   const load = useCallback(async () => {
-    setErr(null)
+    setErr(null);
     const [a, b] = await Promise.all([
-      supabase.from(V.cost_activity_analysis).select('*'),
-      supabase.from(V.cost_visual_breakdown).select('*'),
-    ])
-    if (a.error) throw a.error
-    if (b.error) throw b.error
-    setActivities(((a.data ?? []) as Activity[]).sort((x, y) =>
-      compareItemCode(x.item_code, y.item_code)
-    ))
-    setBreakdown((b.data ?? []) as Breakdown[])
-  }, [])
+      supabase.from(V.cost_activity_analysis).select("*"),
+      supabase.from(V.cost_visual_breakdown).select("*"),
+    ]);
+    if (a.error) throw a.error;
+    if (b.error) throw b.error;
+    setActivities(
+      ((a.data ?? []) as Activity[]).sort((x, y) =>
+        compareItemCode(x.item_code, y.item_code),
+      ),
+    );
+    setBreakdown((b.data ?? []) as Breakdown[]);
+  }, []);
 
   useEffect(() => {
-    ;(async () => {
+    (async () => {
       try {
-        await load()
+        await load();
       } catch (e: unknown) {
-        setErr(getErrorMessage(e))
+        setErr(getErrorMessage(e));
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    })()
-  }, [load])
+    })();
+  }, [load]);
 
   async function savePlanned(itemId: number, raw: string) {
-    const v = parseBRLInput(raw)
+    const v = parseBRLInput(raw);
     if (v == null || v < 0) {
-      setErr('Valor previsto inválido.')
-      return
+      setErr("Valor previsto inválido.");
+      return;
     }
-    setSaving(`p-${itemId}`)
-    setErr(null)
+    setSaving(`p-${itemId}`);
+    setErr(null);
     const { error } = await supabase
       .from(T.cost_budgets)
       .update({ planned_value: v })
-      .eq('item_id', itemId)
-    setSaving(null)
+      .eq("item_id", itemId);
+    setSaving(null);
     if (error) {
-      setErr(error.message)
-      return
+      setErr(error.message);
+      return;
     }
-    await load()
+    await load();
   }
 
   async function saveActual(itemId: number, raw: string) {
-    const v = parseBRLInput(raw)
+    const v = parseBRLInput(raw);
     if (v == null || v < 0) {
-      setErr('Valor real inválido.')
-      return
+      setErr("Valor real inválido.");
+      return;
     }
-    setSaving(`a-${itemId}`)
-    setErr(null)
+    setSaving(`a-${itemId}`);
+    setErr(null);
     try {
-      const today = new Date().toISOString().slice(0, 10)
-      await replaceItemActualWithManualTotal(supabase, itemId, v, today)
-      await load()
+      const today = new Date().toISOString().slice(0, 10);
+      await replaceItemActualWithManualTotal(supabase, itemId, v, today);
+      await load();
     } catch (e: unknown) {
-      setErr(getErrorMessage(e))
+      setErr(getErrorMessage(e));
     } finally {
-      setSaving(null)
+      setSaving(null);
     }
   }
 
   async function saveSubgroupName(subgroupId: number | null, raw: string) {
-    if (subgroupId == null) return
-    setSaving(`sg-${subgroupId}`)
-    setErr(null)
+    if (subgroupId == null) return;
+    setSaving(`sg-${subgroupId}`);
+    setErr(null);
     const { error } = await supabase
       .from(T.cost_subgroups)
       .update({ name: raw.trim() })
-      .eq('id', subgroupId)
-    setSaving(null)
+      .eq("id", subgroupId);
+    setSaving(null);
     if (error) {
-      setErr(error.message)
-      return
+      setErr(error.message);
+      return;
     }
-    await load()
+    await load();
   }
 
   if (loading) {
-    return <p className="text-(--muted)">Carregando planilha…</p>
+    return <p className="text-(--muted)">Carregando planilha…</p>;
   }
 
   if (err && activities.length === 0) {
@@ -146,7 +148,7 @@ export function Visual() {
       <div className="rounded-lg border border-red-300 bg-red-50 p-4 text-red-900 dark:bg-red-950/40">
         {err}
       </div>
-    )
+    );
   }
 
   return (
@@ -154,9 +156,9 @@ export function Visual() {
       <div>
         <h1 className="text-2xl font-semibold">Visual — aba Dados</h1>
         <p className="mt-1 text-sm text-(--muted)">
-          Mesma lógica do Excel: total por código (laranja) e linhas por grupo/subgrupo
-          (Mão de Obra / Equipamento / Materiais). Edite previsto ou real e salve no botão
-          ou Enter.
+          Mesma lógica do Excel: total por código (laranja) e linhas por
+          grupo/subgrupo (Mão de Obra / Equipamento / Materiais). Edite previsto
+          ou real e salve no botão ou Enter.
         </p>
       </div>
 
@@ -168,18 +170,26 @@ export function Visual() {
 
       <div className="space-y-10 overflow-x-auto">
         {activities.map((act) => {
-          const code = act.item_code ?? ''
-          const rows = byCode.get(code) ?? []
+          const code = act.item_code ?? "";
+          const rows = byCode.get(code) ?? [];
           return (
-            <section key={act.item_id} className="min-w-[720px]">
+            <section key={act.item_id} className="min-w-180">
               <div className="overflow-hidden rounded-lg border border-(--border) bg-(--card) shadow-sm">
                 <table className="w-full border-collapse text-sm">
                   <thead>
                     <tr className="border-b border-(--border) bg-slate-100 dark:bg-slate-800">
-                      <th className="px-2 py-2 text-left font-semibold">Itens</th>
-                      <th className="px-2 py-2 text-left font-semibold">Descrição / Sub-Grupo</th>
-                      <th className="px-2 py-2 text-right font-semibold">Total previsto</th>
-                      <th className="px-2 py-2 text-right font-semibold">Total real</th>
+                      <th className="px-2 py-2 text-left font-semibold">
+                        Itens
+                      </th>
+                      <th className="px-2 py-2 text-left font-semibold">
+                        Descrição / Sub-Grupo
+                      </th>
+                      <th className="px-2 py-2 text-right font-semibold">
+                        Total previsto
+                      </th>
+                      <th className="px-2 py-2 text-right font-semibold">
+                        Total real
+                      </th>
                       <th className="px-2 py-2 w-24"></th>
                     </tr>
                   </thead>
@@ -211,7 +221,10 @@ export function Visual() {
                     </tr>
 
                     {rows.map((r) => (
-                      <tr key={r.item_id} className="bg-white dark:bg-slate-900/40">
+                      <tr
+                        key={r.item_id}
+                        className="bg-white dark:bg-slate-900/40"
+                      >
                         <td className="border-b border-(--border) px-2 py-1.5"></td>
                         <td className="border-b border-(--border) px-2 py-1.5">
                           <div className="text-xs font-semibold text-blue-800 dark:text-blue-300">
@@ -220,18 +233,22 @@ export function Visual() {
                           <div className="mt-0.5 flex flex-wrap items-center gap-2">
                             <span className="text-(--muted)">Sub:</span>
                             <input
-                              defaultValue={r.subgroup_name ?? ''}
-                              className="max-w-[280px] flex-1 rounded border border-(--border) bg-(--card) px-2 py-1 text-sm"
+                              defaultValue={r.subgroup_name ?? ""}
+                              className="max-w-70 flex-1 rounded border border-(--border) bg-(--card) px-2 py-1 text-sm"
                               disabled={r.subgroup_id == null || !!saving}
                               onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  e.currentTarget.blur()
+                                if (e.key === "Enter") {
+                                  e.currentTarget.blur();
                                 }
                               }}
                               onBlur={(e) => {
-                                const nv = e.target.value.trim()
-                                if (nv && nv !== (r.subgroup_name ?? '') && r.subgroup_id) {
-                                  void saveSubgroupName(r.subgroup_id, nv)
+                                const nv = e.target.value.trim();
+                                if (
+                                  nv &&
+                                  nv !== (r.subgroup_name ?? "") &&
+                                  r.subgroup_id
+                                ) {
+                                  void saveSubgroupName(r.subgroup_id, nv);
                                 }
                               }}
                             />
@@ -263,11 +280,11 @@ export function Visual() {
                 </table>
               </div>
             </section>
-          )
+          );
         })}
       </div>
     </div>
-  )
+  );
 }
 
 function InlineMoney({
@@ -275,26 +292,26 @@ function InlineMoney({
   disabled,
   onSave,
 }: {
-  defaultValue: number
-  disabled: boolean
-  onSave: (raw: string) => void
+  defaultValue: number;
+  disabled: boolean;
+  onSave: (raw: string) => void;
 }) {
-  const [val, setVal] = useState(() => formatBRL(defaultValue))
+  const [val, setVal] = useState(() => formatBRL(defaultValue));
 
   useEffect(() => {
-    setVal(formatBRL(defaultValue))
-  }, [defaultValue])
+    setVal(formatBRL(defaultValue));
+  }, [defaultValue]);
 
   return (
     <div className="flex flex-col items-end gap-1 sm:flex-row sm:items-center sm:justify-end">
       <input
-        className="w-full min-w-[120px] max-w-[160px] rounded border border-(--border) bg-(--card) px-2 py-1 text-right text-sm tabular-nums"
+        className="w-full min-w-30 max-w-40 rounded border border-(--border) bg-(--card) px-2 py-1 text-right text-sm tabular-nums"
         value={val}
         disabled={disabled}
         onChange={(e) => setVal(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            onSave(val)
+          if (e.key === "Enter") {
+            onSave(val);
           }
         }}
       />
@@ -307,5 +324,5 @@ function InlineMoney({
         Salvar
       </button>
     </div>
-  )
+  );
 }

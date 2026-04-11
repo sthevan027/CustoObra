@@ -7,6 +7,10 @@ import type { ActivityRow, GroupRow, SubgroupRow } from "../lib/dashboardTypes";
 import { classifyEquip } from "../lib/dashboardSubgroupChartBuckets";
 import { DashboardSkeleton } from "../components/dashboard/DashboardSkeleton";
 import { DashboardCostCharts } from "../components/dashboard/DashboardCostCharts";
+import {
+  DashboardTemporalCostChart,
+  type TemporalForecastPlanned,
+} from "../components/dashboard/DashboardTemporalCostChart";
 import { V } from "../lib/db/catalog";
 
 const CONTRACT_LABEL =
@@ -254,6 +258,19 @@ export function Dashboard() {
       return g;
     });
   }, [groups, contractOnlyLines]);
+
+  /** Orçamento previsto por tópico — alinhado aos KPIs por grupo (inclui 6.1.1 em Equipamento). */
+  const temporalForecastPlanned = useMemo((): TemporalForecastPlanned => {
+    const pick = (name: string) =>
+      Number(
+        groupsMerged.find((g) => g.group_name === name)?.planned_value ?? 0,
+      );
+    return {
+      mo: pick("Mão de Obra"),
+      eq: pick("Equipamento"),
+      mat: pick("Materiais"),
+    };
+  }, [groupsMerged]);
 
   const totalsPrimary = useMemo(() => {
     let p = 0;
@@ -733,6 +750,8 @@ export function Dashboard() {
       </section>
 
       <DashboardCostCharts subgroups={subgroupsAdjusted} />
+
+      <DashboardTemporalCostChart planned={temporalForecastPlanned} />
 
       <section className="space-y-4 rounded-xl border border-(--border) bg-(--card) p-5 shadow-(--shadow-card)">
         <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">

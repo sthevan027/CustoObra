@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """
-Gera Supabase/seed.generated.sql a partir de Excel/Controle Operacional V2.xlsx (aba Dados).
+Gera Supabase/seed.generated.sql a partir do Excel de controle operacional (aba Dados).
+
+Layout esperado (Controle Operacional V3.xlsx e equivalentes):
+  A=Itens, B=Descrição, C=Sub-Grupo, D=UNID., E=QUANT., F=Valor Unid., G=Valor total,
+  H=Total Com BDI, I=VALOR REAL.
 
 Requer: pip install openpyxl
 
@@ -37,7 +41,7 @@ def get_openpyxl() -> Any:
 
 
 REPO = Path(__file__).resolve().parents[1]
-EXCEL = REPO / "Excel" / "Controle Operacional V2.xlsx"
+EXCEL = REPO / "Excel" / "Controle Operacional V3.xlsx"
 OUT = REPO / "Supabase" / "seed.generated.sql"
 DEFAULT_SHEET = "Dados"
 
@@ -177,6 +181,32 @@ def recompute_display_labels(lines: list[dict]) -> None:
         b["display_label"] = sg if n == 1 else f"{sg} (#{n})"
 
 
+def find_header_row(rows: list[tuple[Any, ...]]) -> int:
+    """Localiza a linha cujo texto em A é 'Itens' (cabeçalho da tabela de dados)."""
+    for i, row in enumerate(rows[:30]):
+        a = as_text(row[0] if row else None).lower()
+        if a == "itens":
+            return i
+    return 3
+
+
+def row_planned_and_real(row: tuple[Any, ...]) -> tuple[float, float]:
+    """
+    Orçamento (previsto) = coluna Valor total (G); se vazio, QUANT * Valor Unid.
+    Real = coluna VALOR REAL (I), ou 0.
+    """
+    q = as_float(row[4] if len(row) > 4 else None)
+    vu = as_float(row[5] if len(row) > 5 else None)
+    vt = row[6] if len(row) > 6 else None
+    if vt is not None and str(vt).strip() != "":
+        tp = as_float(vt)
+    else:
+        tp = round(q * vu + 1e-9, 2)
+    tr_raw = row[8] if len(row) > 8 else None
+    tr = as_float(tr_raw) if tr_raw is not None else 0.0
+    return tp, tr
+
+
 def parse_dados(excel_path: Path, sheet_name: str) -> tuple[list[dict], dict[str, float]]:
     openpyxl_mod = get_openpyxl()
     wb = openpyxl_mod.load_workbook(excel_path, read_only=True, data_only=True)
@@ -189,6 +219,9 @@ def parse_dados(excel_path: Path, sheet_name: str) -> tuple[list[dict], dict[str
     ws = wb[sheet_name]
     rows: list[tuple[Any, ...]] = list(ws.iter_rows(values_only=True))
     wb.close()
+
+    header_i = find_header_row(rows)
+    data_start = header_i + 1
 
     parents: list[dict[str, Any]] = []
     current: dict[str, Any] | None = None
@@ -210,13 +243,13 @@ def parse_dados(excel_path: Path, sheet_name: str) -> tuple[list[dict], dict[str
             }
         )
 
-    for row in rows[4:]:
-        a, b, c, d, e = row[0], row[1], row[2], row[3], row[4]
-        code = as_text(a)
-        desc = as_text(b)
-        sub = as_text(c)
-        tp = as_float(d)
-        tr = as_float(e)
+    for row in rows[data_start:]:
+        if not row:
+            continue
+        code = as_text(row[0])
+        desc = as_text(row[1])
+        sub = as_text(row[2])
+        tp, tr = row_planned_and_real(row)
 
         if code and re.match(r"^[\d.]+", code):
             if current:
@@ -313,7 +346,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--excel",
         default=str(EXCEL),
-        help="Caminho do arquivo Excel. Padrão: Excel/Controle Operacional V2.xlsx",
+        help="Caminho do arquivo Excel. Padrão: Excel/Controle Operacional V3.xlsx",
     )
     parser.add_argument(
         "--sheet",

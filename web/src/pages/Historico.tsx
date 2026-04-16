@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useAuth } from "../contexts/AuthContext";
 import { supabase } from "../lib/supabase";
 import { T, V } from "../lib/db/catalog";
 import { formatBRL } from "../lib/money";
@@ -32,6 +33,8 @@ type EnrichedRow = {
   action: string;
   changed_at: string;
   changed_by: string | null;
+  /** Nome em app_profiles (view vw_cost_audit_enriched). */
+  changed_by_name: string | null;
   item_id: number | null;
   cost_date_text: string | null;
   amount: number | string | null;
@@ -60,7 +63,26 @@ async function fetchAuditRows(): Promise<{
   return { rows: (data ?? []) as EnrichedRow[], error: null };
 }
 
+function auditUserLabel(
+  r: EnrichedRow,
+  sessionUserId: string | undefined,
+  profileDisplayName: string | null,
+): string {
+  const n = r.changed_by_name?.trim();
+  if (n) return n;
+  if (
+    sessionUserId &&
+    r.changed_by === sessionUserId &&
+    profileDisplayName?.trim()
+  ) {
+    return profileDisplayName.trim();
+  }
+  if (r.changed_by) return `${String(r.changed_by).slice(0, 8)}…`;
+  return "—";
+}
+
 export function Historico() {
+  const { session, displayName: profileDisplayName } = useAuth();
   const [rows, setRows] = useState<EnrichedRow[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -345,9 +367,9 @@ export function Historico() {
                   </td>
                   <td
                     className="max-w-40 truncate px-3 py-2.5 text-xs text-(--muted)"
-                    title={r.changed_by ?? undefined}
+                    title={auditUserLabel(r, session?.user?.id, profileDisplayName)}
                   >
-                    {r.changed_by ?? "—"}
+                    {auditUserLabel(r, session?.user?.id, profileDisplayName)}
                   </td>
                   <td className="px-3 py-2.5 text-center">
                     <button

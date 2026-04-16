@@ -5,7 +5,7 @@
 -- conta admin, apague a linha antiga antes de inserir a nova:
 --
 -- delete from public.app_profiles;
--- insert into public.app_profiles (id, role)
--- values ('<uuid em auth.users>', 'admin');
+-- insert into public.app_profiles (id, role, display_name)
+-- values ('<uuid em auth.users>', 'admin', 'Nome exibido no histórico');
 --
 -- Desative "Sign ups" públicos em Authentication > Providers se quiser só esta conta.

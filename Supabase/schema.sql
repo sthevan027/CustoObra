@@ -76,6 +76,7 @@ create table if not exists public.cost_entries_audit (
 create table if not exists public.app_profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   role text not null check (role = 'admin'),
+  display_name text null,
   created_at timestamptz not null default now()
 );
 
@@ -450,8 +451,10 @@ select
   i.name as item_name,
   g.name as group_name,
   ca.old_row,
-  ca.new_row
+  ca.new_row,
+  nullif(trim(prof.display_name), '') as changed_by_name
 from public.cost_entries_audit ca
+left join public.app_profiles prof on prof.id = ca.changed_by
 left join public.cost_items i
   on i.id = coalesce(
     (ca.new_row->>'item_id')::bigint,
@@ -533,6 +536,7 @@ drop policy if exists "jl_audit_del_admin" on public.cost_entries_audit;
 drop policy if exists "jl_anon_update_subgroups" on public.cost_subgroups;
 drop policy if exists "jl_subgroups_upd_admin" on public.cost_subgroups;
 drop policy if exists "jl_profile_sel_own" on public.app_profiles;
+drop policy if exists "jl_profile_upd_own" on public.app_profiles;
 
 create policy "jl_anon_select_groups"
   on public.cost_groups for select using (true);
@@ -596,6 +600,11 @@ create policy "jl_profile_sel_own"
   on public.app_profiles for select to authenticated
   using (auth.uid() = id);
 
+create policy "jl_profile_upd_own"
+  on public.app_profiles for update to authenticated
+  using (auth.uid() = id and public.jl_is_cost_admin())
+  with check (auth.uid() = id and public.jl_is_cost_admin());
+
 grant usage on schema public to anon, authenticated;
 grant select on public.vw_cost_analysis to anon, authenticated;
 grant select on public.vw_cost_budget_line_unique to anon, authenticated;
@@ -609,5 +618,5 @@ grant select on public.vw_cost_visual_breakdown to anon, authenticated;
 grant select on public.vw_cost_subgroup_summary to anon, authenticated;
 grant select on public.vw_cost_audit_enriched to authenticated;
 
-grant select on table public.app_profiles to authenticated;
+grant select, update on table public.app_profiles to authenticated;
 grant delete on table public.cost_entries_audit to authenticated;

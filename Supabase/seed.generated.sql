@@ -1,5 +1,5 @@
 -- Seed gerado automaticamente (scripts/generate_seed_from_excel.py)
--- Fonte: Excel/Controle Operacional V3.xlsx — aba Dados
+-- Fonte: Excel\Controle Operacional V3.xlsx — aba Dados
 --
 -- Grupo Total: Total previsto/real por código (linha pai).
 -- Grupos MO/EQ/MAT: quebra por subgrupo; nome do item = "descrição — subgrupo".
@@ -7,11 +7,15 @@
 -- Nota: a soma dos Total previsto das linhas pai em Dados pode diferir do
 -- "Total" na aba Controle (~8.04M vs ~8.09M). O seed reflete Dados.
 --
--- Sanity (aba Dados):
---   Soma Total previsto (linhas pai): 32373245.77
+-- Sanity (aba Dados) — somas em Decimal; exibição com 2 casas:
+--   Soma Total previsto (linhas pai, até último código na aba): 32373245.76
 --   Soma Total real (linhas pai): 0.00
---   Soma previsto (MO+EQ+MAT detalhado): 31209584.53
---   Soma real (MO+EQ+MAT detalhado): 0.00
+--   Soma previsto (quebra MO+EQ+MAT+FOR): 31209584.56
+--   Soma real (quebra MO+EQ+MAT+FOR): 0.00
+--   Delta previsto (linhas pai − quebra): 1163661.20
+--   Contrato 6.1.1 — previsto linha pai: 1164841.19; soma da quebra: 0.00; (pai − quebra): 1164841.19
+--   Delta global − (pai−quebra) do 6.1.1 = saldo dos demais contratos: -1179.99
+--   (Se só 6.1.1 não tiver detalhe, o primeiro Delta deve igualar (pai−quebra) do 6.1.1 e o saldo dos demais ≈ 0.)
 
 -- Groups
 insert into public.cost_groups (name, code) values
@@ -50,6 +54,7 @@ join (values
   ('Equipamento', 'Ônibus', 'EQ-NIBUS'),
   ('Equipamento', 'ônibus Extra', 'EQ-NIBUS-EXTRA'),
   ('Fornecimento', 'Fornecimento De Tubulação', 'FOR-FORNECIMENTO-DE-TUBULA-O'),
+  ('Fornecimento', 'Fornecimento Eletrico', 'FOR-FORNECIMENTO-ELETRICO'),
   ('Fornecimento', 'Material Mecanico', 'FOR-MATERIAL-MECANICO'),
   ('Materiais', 'Andaimes', 'MAT-ANDAIMES'),
   ('Materiais', 'Concreto/MT', 'MAT-CONCRETO-MT'),
@@ -57,9 +62,7 @@ join (values
   ('Materiais', 'Equipe MOD/MT', 'MAT-EQUIPE-MOD-MT'),
   ('Materiais', 'Equipe MOI/MT', 'MAT-EQUIPE-MOI-MT'),
   ('Materiais', 'Exames Demissionais/MT', 'MAT-EXAMES-DEMISSIONAIS-MT'),
-  ('Materiais', 'Fornecimento Eletrico', 'MAT-FORNECIMENTO-ELETRICO'),
   ('Materiais', 'Material Mecanico', 'MAT-MATERIAL-MECANICO'),
-  ('Materiais', 'Outro/MT', 'MAT-OUTRO-MT'),
   ('Materiais', 'Outros/Consumiveis', 'MAT-OUTROS-CONSUMIVEIS'),
   ('Materiais', 'Outros/MT', 'MAT-OUTROS-MT'),
   ('Materiais', 'Outros/consumiveis', 'MAT-OUTROS-CONSUMIVEIS-1'),
@@ -160,7 +163,7 @@ join (values
   ('Materiais', 'materia de escritorio/MT', 'Administração e Manutenção de Canteiro — materia de escritorio/MT', '1.2.1.2'),
   ('Materiais', 'impressoras/MT', 'Administração e Manutenção de Canteiro — impressoras/MT', '1.2.1.2'),
   ('Materiais', 'Outros/Consumiveis', 'Administração e Manutenção de Canteiro — Outros/Consumiveis', '1.2.1.2'),
-  ('Materiais', 'Outro/MT', 'Administração e Manutenção de Canteiro — Outro/MT', '1.2.1.2'),
+  ('Materiais', 'Outros/MT', 'Administração e Manutenção de Canteiro — Outros/MT', '1.2.1.2'),
   ('Materiais', 'Copa/MT', 'Administração e Manutenção de Canteiro — Copa/MT', '1.2.1.2'),
   ('Mão de Obra', 'Mão de Obra', 'Desmobilização de Canteiro Completo (Adm, Vestiários, Refeitório, Armazém, etc) — Mão de Obra', '1.2.1.3'),
   ('Mão de Obra', 'Mão de Obra', 'Administração Local — Mão de Obra', '1.3.1.1'),
@@ -297,10 +300,10 @@ join (values
   ('Materiais', 'Outros/consumiveis', 'Relocação de interferências - Água - diâmetro maior 10" até 12" — Outros/consumiveis', '3.5.1.6'),
   ('Mão de Obra', 'Mão de Obra', 'Relocação de interferências - Elétrica cabos até 25 mm² (incluindo eletroduto, bandejamento, eletrocalha e conduletes) — Mão de Obra', '3.5.1.7'),
   ('Equipamento', 'Ferramental/EQ', 'Relocação de interferências - Elétrica cabos até 25 mm² (incluindo eletroduto, bandejamento, eletrocalha e conduletes) — Ferramental/EQ', '3.5.1.7'),
-  ('Materiais', 'Fornecimento Eletrico', 'Relocação de interferências - Elétrica cabos até 25 mm² (incluindo eletroduto, bandejamento, eletrocalha e conduletes) — Fornecimento Eletrico', '3.5.1.7'),
+  ('Fornecimento', 'Fornecimento Eletrico', 'Relocação de interferências - Elétrica cabos até 25 mm² (incluindo eletroduto, bandejamento, eletrocalha e conduletes) — Fornecimento Eletrico', '3.5.1.7'),
   ('Mão de Obra', 'Mão de Obra', 'Relocação de interferências - Elétrica cabos até 10 mm² — Mão de Obra', '3.5.1.8'),
   ('Equipamento', 'Ferramental/EQ', 'Relocação de interferências - Elétrica cabos até 10 mm² — Ferramental/EQ', '3.5.1.8'),
-  ('Materiais', 'Fornecimento Eletrico', 'Relocação de interferências - Elétrica cabos até 10 mm² — Fornecimento Eletrico', '3.5.1.8'),
+  ('Fornecimento', 'Fornecimento Eletrico', 'Relocação de interferências - Elétrica cabos até 10 mm² — Fornecimento Eletrico', '3.5.1.8'),
   ('Mão de Obra', 'Mão de Obra', 'Relocação de interferências - Automação - Fibra Optica — Mão de Obra', '3.5.1.9'),
   ('Equipamento', 'Ferramental/EQ', 'Relocação de interferências - Automação - Fibra Optica — Ferramental/EQ', '3.5.1.9'),
   ('Materiais', 'Outros/consumiveis', 'Relocação de interferências - Automação - Fibra Optica — Outros/consumiveis', '3.5.1.9'),
@@ -482,7 +485,7 @@ join (values
   ('Materiais', 'materia de escritorio/MT', 'Administração e Manutenção de Canteiro — materia de escritorio/MT', '1.2.1.2', 26400.00),
   ('Materiais', 'impressoras/MT', 'Administração e Manutenção de Canteiro — impressoras/MT', '1.2.1.2', 18000.00),
   ('Materiais', 'Outros/Consumiveis', 'Administração e Manutenção de Canteiro — Outros/Consumiveis', '1.2.1.2', 23400.00),
-  ('Materiais', 'Outro/MT', 'Administração e Manutenção de Canteiro — Outro/MT', '1.2.1.2', 288000.00),
+  ('Materiais', 'Outros/MT', 'Administração e Manutenção de Canteiro — Outros/MT', '1.2.1.2', 288000.00),
   ('Materiais', 'Copa/MT', 'Administração e Manutenção de Canteiro — Copa/MT', '1.2.1.2', 21600.00),
   ('Mão de Obra', 'Mão de Obra', 'Desmobilização de Canteiro Completo (Adm, Vestiários, Refeitório, Armazém, etc) — Mão de Obra', '1.2.1.3', 0.00),
   ('Mão de Obra', 'Mão de Obra', 'Administração Local — Mão de Obra', '1.3.1.1', 4808656.90),
@@ -619,10 +622,10 @@ join (values
   ('Materiais', 'Outros/consumiveis', 'Relocação de interferências - Água - diâmetro maior 10" até 12" — Outros/consumiveis', '3.5.1.6', 16057.11),
   ('Mão de Obra', 'Mão de Obra', 'Relocação de interferências - Elétrica cabos até 25 mm² (incluindo eletroduto, bandejamento, eletrocalha e conduletes) — Mão de Obra', '3.5.1.7', 13000.39),
   ('Equipamento', 'Ferramental/EQ', 'Relocação de interferências - Elétrica cabos até 25 mm² (incluindo eletroduto, bandejamento, eletrocalha e conduletes) — Ferramental/EQ', '3.5.1.7', 633.77),
-  ('Materiais', 'Fornecimento Eletrico', 'Relocação de interferências - Elétrica cabos até 25 mm² (incluindo eletroduto, bandejamento, eletrocalha e conduletes) — Fornecimento Eletrico', '3.5.1.7', 54430.58),
+  ('Fornecimento', 'Fornecimento Eletrico', 'Relocação de interferências - Elétrica cabos até 25 mm² (incluindo eletroduto, bandejamento, eletrocalha e conduletes) — Fornecimento Eletrico', '3.5.1.7', 54430.58),
   ('Mão de Obra', 'Mão de Obra', 'Relocação de interferências - Elétrica cabos até 10 mm² — Mão de Obra', '3.5.1.8', 13000.39),
   ('Equipamento', 'Ferramental/EQ', 'Relocação de interferências - Elétrica cabos até 10 mm² — Ferramental/EQ', '3.5.1.8', 633.77),
-  ('Materiais', 'Fornecimento Eletrico', 'Relocação de interferências - Elétrica cabos até 10 mm² — Fornecimento Eletrico', '3.5.1.8', 50058.33),
+  ('Fornecimento', 'Fornecimento Eletrico', 'Relocação de interferências - Elétrica cabos até 10 mm² — Fornecimento Eletrico', '3.5.1.8', 50058.33),
   ('Mão de Obra', 'Mão de Obra', 'Relocação de interferências - Automação - Fibra Optica — Mão de Obra', '3.5.1.9', 6500.19),
   ('Equipamento', 'Ferramental/EQ', 'Relocação de interferências - Automação - Fibra Optica — Ferramental/EQ', '3.5.1.9', 316.88),
   ('Materiais', 'Outros/consumiveis', 'Relocação de interferências - Automação - Fibra Optica — Outros/consumiveis', '3.5.1.9', 324.50),
@@ -805,7 +808,7 @@ join (values
   ('Materiais', 'materia de escritorio/MT', 'Administração e Manutenção de Canteiro — materia de escritorio/MT', '1.2.1.2', 0.00, 'Posição atual (Controle Operacional V3.xlsx — aba Dados)', 'SEED-V2-MAT-1-2-1-2-17'),
   ('Materiais', 'impressoras/MT', 'Administração e Manutenção de Canteiro — impressoras/MT', '1.2.1.2', 0.00, 'Posição atual (Controle Operacional V3.xlsx — aba Dados)', 'SEED-V2-MAT-1-2-1-2-18'),
   ('Materiais', 'Outros/Consumiveis', 'Administração e Manutenção de Canteiro — Outros/Consumiveis', '1.2.1.2', 0.00, 'Posição atual (Controle Operacional V3.xlsx — aba Dados)', 'SEED-V2-MAT-1-2-1-2-19'),
-  ('Materiais', 'Outro/MT', 'Administração e Manutenção de Canteiro — Outro/MT', '1.2.1.2', 0.00, 'Posição atual (Controle Operacional V3.xlsx — aba Dados)', 'SEED-V2-MAT-1-2-1-2-20'),
+  ('Materiais', 'Outros/MT', 'Administração e Manutenção de Canteiro — Outros/MT', '1.2.1.2', 0.00, 'Posição atual (Controle Operacional V3.xlsx — aba Dados)', 'SEED-V2-MAT-1-2-1-2-20'),
   ('Materiais', 'Copa/MT', 'Administração e Manutenção de Canteiro — Copa/MT', '1.2.1.2', 0.00, 'Posição atual (Controle Operacional V3.xlsx — aba Dados)', 'SEED-V2-MAT-1-2-1-2-21'),
   ('Mão de Obra', 'Mão de Obra', 'Desmobilização de Canteiro Completo (Adm, Vestiários, Refeitório, Armazém, etc) — Mão de Obra', '1.2.1.3', 0.00, 'Posição atual (Controle Operacional V3.xlsx — aba Dados)', 'SEED-V2-MO-1-2-1-3-22'),
   ('Mão de Obra', 'Mão de Obra', 'Administração Local — Mão de Obra', '1.3.1.1', 0.00, 'Posição atual (Controle Operacional V3.xlsx — aba Dados)', 'SEED-V2-MO-1-3-1-1-23'),
@@ -942,10 +945,10 @@ join (values
   ('Materiais', 'Outros/consumiveis', 'Relocação de interferências - Água - diâmetro maior 10" até 12" — Outros/consumiveis', '3.5.1.6', 0.00, 'Posição atual (Controle Operacional V3.xlsx — aba Dados)', 'SEED-V2-MAT-3-5-1-6-154'),
   ('Mão de Obra', 'Mão de Obra', 'Relocação de interferências - Elétrica cabos até 25 mm² (incluindo eletroduto, bandejamento, eletrocalha e conduletes) — Mão de Obra', '3.5.1.7', 0.00, 'Posição atual (Controle Operacional V3.xlsx — aba Dados)', 'SEED-V2-MO-3-5-1-7-155'),
   ('Equipamento', 'Ferramental/EQ', 'Relocação de interferências - Elétrica cabos até 25 mm² (incluindo eletroduto, bandejamento, eletrocalha e conduletes) — Ferramental/EQ', '3.5.1.7', 0.00, 'Posição atual (Controle Operacional V3.xlsx — aba Dados)', 'SEED-V2-EQ-3-5-1-7-156'),
-  ('Materiais', 'Fornecimento Eletrico', 'Relocação de interferências - Elétrica cabos até 25 mm² (incluindo eletroduto, bandejamento, eletrocalha e conduletes) — Fornecimento Eletrico', '3.5.1.7', 0.00, 'Posição atual (Controle Operacional V3.xlsx — aba Dados)', 'SEED-V2-MAT-3-5-1-7-157'),
+  ('Fornecimento', 'Fornecimento Eletrico', 'Relocação de interferências - Elétrica cabos até 25 mm² (incluindo eletroduto, bandejamento, eletrocalha e conduletes) — Fornecimento Eletrico', '3.5.1.7', 0.00, 'Posição atual (Controle Operacional V3.xlsx — aba Dados)', 'SEED-V2-FOR-3-5-1-7-157'),
   ('Mão de Obra', 'Mão de Obra', 'Relocação de interferências - Elétrica cabos até 10 mm² — Mão de Obra', '3.5.1.8', 0.00, 'Posição atual (Controle Operacional V3.xlsx — aba Dados)', 'SEED-V2-MO-3-5-1-8-158'),
   ('Equipamento', 'Ferramental/EQ', 'Relocação de interferências - Elétrica cabos até 10 mm² — Ferramental/EQ', '3.5.1.8', 0.00, 'Posição atual (Controle Operacional V3.xlsx — aba Dados)', 'SEED-V2-EQ-3-5-1-8-159'),
-  ('Materiais', 'Fornecimento Eletrico', 'Relocação de interferências - Elétrica cabos até 10 mm² — Fornecimento Eletrico', '3.5.1.8', 0.00, 'Posição atual (Controle Operacional V3.xlsx — aba Dados)', 'SEED-V2-MAT-3-5-1-8-160'),
+  ('Fornecimento', 'Fornecimento Eletrico', 'Relocação de interferências - Elétrica cabos até 10 mm² — Fornecimento Eletrico', '3.5.1.8', 0.00, 'Posição atual (Controle Operacional V3.xlsx — aba Dados)', 'SEED-V2-FOR-3-5-1-8-160'),
   ('Mão de Obra', 'Mão de Obra', 'Relocação de interferências - Automação - Fibra Optica — Mão de Obra', '3.5.1.9', 0.00, 'Posição atual (Controle Operacional V3.xlsx — aba Dados)', 'SEED-V2-MO-3-5-1-9-161'),
   ('Equipamento', 'Ferramental/EQ', 'Relocação de interferências - Automação - Fibra Optica — Ferramental/EQ', '3.5.1.9', 0.00, 'Posição atual (Controle Operacional V3.xlsx — aba Dados)', 'SEED-V2-EQ-3-5-1-9-162'),
   ('Materiais', 'Outros/consumiveis', 'Relocação de interferências - Automação - Fibra Optica — Outros/consumiveis', '3.5.1.9', 0.00, 'Posição atual (Controle Operacional V3.xlsx — aba Dados)', 'SEED-V2-MAT-3-5-1-9-163'),

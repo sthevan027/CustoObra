@@ -18,6 +18,8 @@ Regras:
   Materiais) e serão classificadas errado.
 - Nome no banco: "{descrição pai} — {subgrupo}" (único por grupo; sufixo se colidir).
 - Totais na aba Controle podem diferir da soma em Dados; o seed segue a aba Dados.
+- Valores monetários: leitura e somas com Decimal; arredondamento só para 2 casas ao gerar SQL
+  (numeric(14,2)), evitando drift de float entre linha pai e soma da quebra.
 """
 
 from __future__ import annotations
@@ -27,6 +29,7 @@ import re
 import sys
 import unicodedata
 from collections import defaultdict
+from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 from typing import Any
 
@@ -55,29 +58,55 @@ GROUP_CODE_PREFIX: dict[str, str] = {
     "Fornecimento": "FOR",
 }
 
+MONEY_QUANT = Decimal("0.01")
+DEDUPE_TOLERANCE = Decimal("0.02")
+
 
 def sql_str(s: str) -> str:
     return "'" + s.replace("'", "''") + "'"
 
 
-def money(x: float) -> str:
-    v = round(float(x) + 1e-9, 2)
-    if v < 0:
-        v = 0.0
-    return f"{v:.2f}"
+def to_decimal(value: Any) -> Decimal:
+    """Converte célula numérica para Decimal (evita ruído de float binário)."""
+    if value is None:
+        return Decimal("0")
+    if isinstance(value, Decimal):
+        return value
+    if isinstance(value, bool):
+        return Decimal(int(value))
+    if isinstance(value, int):
+        return Decimal(value)
+    if isinstance(value, float):
+        return Decimal(str(value))
+    s = str(value).strip().replace(" ", "").replace(",", ".")
+    if not s:
+        return Decimal("0")
+    try:
+        return Decimal(s)
+    except Exception:
+        return Decimal("0")
+
+
+def quantize_money(d: Decimal) -> Decimal:
+    if d < 0:
+        d = Decimal("0")
+    return d.quantize(MONEY_QUANT, rounding=ROUND_HALF_UP)
+
+
+def format_sql_money(d: Decimal) -> str:
+    """Único arredondamento para 2 casas — alinhado a numeric(14,2) no Postgres."""
+    return f"{quantize_money(d):.2f}"
+
+
+def format_sql_signed_money(d: Decimal) -> str:
+    """2 casas, conserva sinal (comentários de delta/resíduo no cabeçalho)."""
+    return f"{d.quantize(MONEY_QUANT, rounding=ROUND_HALF_UP):.2f}"
 
 
 def as_text(value: Any) -> str:
     if value is None:
         return ""
     return str(value).strip()
-
-
-def as_float(value: Any) -> float:
-    try:
-        return float(value) if value is not None else 0.0
-    except (TypeError, ValueError):
-        return 0.0
 
 
 def norm_group(desc: str | None) -> str | None:
@@ -116,6 +145,21 @@ def normalize_equip_subgroup_name(subgroup_name: str) -> str:
     return s
 
 
+def subgroup_is_fornecimento_eletrico(sub: str) -> bool:
+    """Col. C 'Fornecimento Eletrico' sob seção Materiais → deve ir ao grupo Fornecimento."""
+    s = (sub or "").strip()
+    if not s:
+        return False
+    folded = (
+        unicodedata.normalize("NFKD", s)
+        .encode("ascii", "ignore")
+        .decode()
+        .lower()
+    )
+    folded = re.sub(r"\s+", " ", folded).strip()
+    return folded in ("fornecimento eletrico", "fornecimento elétrico")
+
+
 def normalize_subgroup(group: str, sub: str) -> str:
     """Unifica grafias de 'Mão de Obra' e nomes genéricos duplicados em Equipamento."""
     s = (sub or "—").strip()
@@ -133,6 +177,17 @@ def normalize_subgroup(group: str, sub: str) -> str:
         return s
     if group == "Equipamento":
         return normalize_equip_subgroup_name(s)
+    if group == "Materiais":
+        mt = (
+            unicodedata.normalize("NFKD", s)
+            .encode("ascii", "ignore")
+            .decode()
+            .lower()
+        )
+        mt = re.sub(r"\s+", "", mt)
+        if mt in ("outro/mt", "outros/mt"):
+            return "Outros/MT"
+        return s
     return s
 
 
@@ -187,7 +242,7 @@ def dedupe_redundant_mat_materiais_header(parents: list[dict]) -> None:
                 if nxt["subgroup"].strip().lower() == "materiais":
                     break
                 sub_sum += nxt["planned"]
-            if sub_sum > 0 and abs(sub_sum - b["planned"]) < 0.02:
+            if sub_sum > 0 and abs(sub_sum - b["planned"]) < DEDUPE_TOLERANCE:
                 drop.append(i)
         for i in reversed(drop):
             del lines[i]
@@ -213,24 +268,28 @@ def find_header_row(rows: list[tuple[Any, ...]]) -> int:
     return 3
 
 
-def row_planned_and_real(row: tuple[Any, ...]) -> tuple[float, float]:
+def row_planned_and_real(row: tuple[Any, ...]) -> tuple[Decimal, Decimal]:
     """
     Orçamento (previsto) = coluna Valor total (G); se vazio, QUANT * Valor Unid.
     Real = coluna VALOR REAL (I), ou 0.
+    Quantização apenas ao final (2 casas), sem float intermediário.
     """
-    q = as_float(row[4] if len(row) > 4 else None)
-    vu = as_float(row[5] if len(row) > 5 else None)
+    q = to_decimal(row[4] if len(row) > 4 else None)
+    vu = to_decimal(row[5] if len(row) > 5 else None)
     vt = row[6] if len(row) > 6 else None
     if vt is not None and str(vt).strip() != "":
-        tp = as_float(vt)
+        tp = quantize_money(to_decimal(vt))
     else:
-        tp = round(q * vu + 1e-9, 2)
+        tp = quantize_money(q * vu)
     tr_raw = row[8] if len(row) > 8 else None
-    tr = as_float(tr_raw) if tr_raw is not None else 0.0
+    if tr_raw is not None and str(tr_raw).strip() != "":
+        tr = quantize_money(to_decimal(tr_raw))
+    else:
+        tr = Decimal("0")
     return tp, tr
 
 
-def parse_dados(excel_path: Path, sheet_name: str) -> tuple[list[dict], dict[str, float]]:
+def parse_dados(excel_path: Path, sheet_name: str) -> tuple[list[dict], dict[str, Decimal]]:
     openpyxl_mod = get_openpyxl()
     wb = openpyxl_mod.load_workbook(excel_path, read_only=True, data_only=True)
     if sheet_name not in wb.sheetnames:
@@ -249,7 +308,7 @@ def parse_dados(excel_path: Path, sheet_name: str) -> tuple[list[dict], dict[str
     parents: list[dict[str, Any]] = []
     current: dict[str, Any] | None = None
 
-    def push_breakdown(group: str, subgroup: str, tp: float, tr: float) -> None:
+    def push_breakdown(group: str, subgroup: str, tp: Decimal, tr: Decimal) -> None:
         assert current is not None
         sg = normalize_subgroup(group, subgroup)
         key = (group, sg)
@@ -312,6 +371,8 @@ def parse_dados(excel_path: Path, sheet_name: str) -> tuple[list[dict], dict[str
                 if not isinstance(sec, str) or not sec:
                     continue
                 leaf_sub = (c_raw or b_raw or "—").strip() or "—"
+                if sec == "Materiais" and subgroup_is_fornecimento_eletrico(leaf_sub):
+                    sec = "Fornecimento"
                 push_breakdown(sec, leaf_sub, tp, tr)
 
     if current:
@@ -319,11 +380,12 @@ def parse_dados(excel_path: Path, sheet_name: str) -> tuple[list[dict], dict[str
 
     dedupe_redundant_mat_materiais_header(parents)
 
+    z = Decimal("0")
     sums = {
-        "parent_planned": sum(p["planned"] for p in parents),
-        "parent_real": sum(p["real"] for p in parents),
-        "bd_planned": 0.0,
-        "bd_real": 0.0,
+        "parent_planned": sum((p["planned"] for p in parents), z),
+        "parent_real": sum((p["real"] for p in parents), z),
+        "bd_planned": z,
+        "bd_real": z,
     }
     for p in parents:
         for b in p["breakdown"]:
@@ -439,11 +501,40 @@ def generate() -> int:
     w(f"-- Nota: a soma dos Total previsto das linhas pai em {args.sheet} pode diferir do")
     w("-- \"Total\" na aba Controle (~8.04M vs ~8.09M). O seed reflete Dados.")
     w("--")
-    w(f"-- Sanity (aba {args.sheet}):")
-    w(f"--   Soma Total previsto (linhas pai): {sums['parent_planned']:.2f}")
-    w(f"--   Soma Total real (linhas pai): {sums['parent_real']:.2f}")
-    w(f"--   Soma previsto (MO+EQ+MAT detalhado): {sums['bd_planned']:.2f}")
-    w(f"--   Soma real (MO+EQ+MAT detalhado): {sums['bd_real']:.2f}")
+    z = Decimal("0")
+    delta_pq = sums["parent_planned"] - sums["bd_planned"]
+    p611 = next((p for p in parents if p["code"].strip() == "6.1.1"), None)
+    if p611:
+        bd611 = sum((b["planned"] for b in p611["breakdown"]), z)
+        pl611 = p611["planned"]
+        gap611 = pl611 - bd611
+        residual_outside = delta_pq - gap611
+    else:
+        bd611 = pl611 = gap611 = residual_outside = z
+
+    w(f"-- Sanity (aba {args.sheet}) — somas em Decimal; exibição com 2 casas:")
+    w(
+        f"--   Soma Total previsto (linhas pai, até último código na aba): {format_sql_money(sums['parent_planned'])}"
+    )
+    w(f"--   Soma Total real (linhas pai): {format_sql_money(sums['parent_real'])}")
+    w(
+        f"--   Soma previsto (quebra MO+EQ+MAT+FOR): {format_sql_money(sums['bd_planned'])}"
+    )
+    w(f"--   Soma real (quebra MO+EQ+MAT+FOR): {format_sql_money(sums['bd_real'])}")
+    w(
+        f"--   Delta previsto (linhas pai − quebra): {format_sql_signed_money(delta_pq)}"
+    )
+    if p611:
+        w(
+            f"--   Contrato 6.1.1 — previsto linha pai: {format_sql_money(pl611)}; "
+            f"soma da quebra: {format_sql_money(bd611)}; (pai − quebra): {format_sql_money(gap611)}"
+        )
+        w(
+            f"--   Delta global − (pai−quebra) do 6.1.1 = saldo dos demais contratos: {format_sql_signed_money(residual_outside)}"
+        )
+        w(
+            "--   (Se só 6.1.1 não tiver detalhe, o primeiro Delta deve igualar (pai−quebra) do 6.1.1 e o saldo dos demais ≈ 0.)"
+        )
     w("")
 
     w("-- Groups")
@@ -514,7 +605,7 @@ def generate() -> int:
     for i, p in enumerate(parents):
         comma = "," if i < len(parents) - 1 else ""
         w(
-            f"  ('Total', 'Total', {sql_str(p['name'])}, {sql_str(p['code'])}, {money(p['planned'])}){comma}"
+            f"  ('Total', 'Total', {sql_str(p['name'])}, {sql_str(p['code'])}, {format_sql_money(p['planned'])}){comma}"
         )
     w(") as b(group_name, subgroup_name, item_name, item_code, planned_value)")
     w("  on b.group_name=g.name and b.subgroup_name=sg.name")
@@ -534,7 +625,7 @@ def generate() -> int:
         for b in p["breakdown"]:
             nm = item_breakdown_name(p["name"], b["display_label"])
             budget_break_rows.append(
-                (b["group"], b["subgroup"], nm, p["code"], money(b["planned"]))
+                (b["group"], b["subgroup"], nm, p["code"], format_sql_money(b["planned"]))
             )
     for i, (gn, sn, nm, code, pv) in enumerate(budget_break_rows):
         comma = "," if i < len(budget_break_rows) - 1 else ""
@@ -560,7 +651,7 @@ def generate() -> int:
         comma = "," if i < len(parents) - 1 else ""
         ext = f"SEED-V2-TOT-{p['code'].replace('.', '-')}"
         w(
-            f"  ('Total', 'Total', {sql_str(p['name'])}, {sql_str(p['code'])}, {money(p['real'])}, {sql_str(desc)}, {sql_str(ext)}){comma}"
+            f"  ('Total', 'Total', {sql_str(p['name'])}, {sql_str(p['code'])}, {format_sql_money(p['real'])}, {sql_str(desc)}, {sql_str(ext)}){comma}"
         )
     w(") as c(group_name, subgroup_name, item_name, item_code, amount, description, external_id)")
     w("  on c.group_name=g.name and c.subgroup_name=sg.name")
@@ -598,7 +689,7 @@ def generate() -> int:
         gn, sn, nm, code, amt, d, ext = r
         comma = "," if i < len(rows) - 1 else ""
         w(
-            f"  ({sql_str(gn)}, {sql_str(sn)}, {sql_str(nm)}, {sql_str(code)}, {money(amt)}, {sql_str(d)}, {sql_str(ext)}){comma}"
+            f"  ({sql_str(gn)}, {sql_str(sn)}, {sql_str(nm)}, {sql_str(code)}, {format_sql_money(amt)}, {sql_str(d)}, {sql_str(ext)}){comma}"
         )
     w(") as c(group_name, subgroup_name, item_name, item_code, amount, description, external_id)")
     w("  on c.group_name=g.name and c.subgroup_name=sg.name")

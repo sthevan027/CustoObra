@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase } from "../lib/supabase";
 import { T } from "../lib/db/catalog";
@@ -95,27 +95,13 @@ export function Login() {
         <h1 className="text-xl font-semibold tracking-tight text-(--text)">
           Acesso administrativo
         </h1>
-        <p className="mt-2 text-sm leading-relaxed text-(--muted)">
-          Lançamentos e histórico exigem login. O dashboard público continua em{" "}
-          <Link to="/" className="font-medium text-(--accent) hover:underline">
-            /
-          </Link>{" "}
-          e o visualizador em{" "}
-          <Link
-            to="/visual"
-            className="font-medium text-(--accent) hover:underline"
-          >
-            /visual
-          </Link>
-          .
-        </p>
 
         <form
           onSubmit={(e) => void onSubmit(e)}
           className="mt-8 space-y-4 rounded-xl border border-(--border) bg-(--card) p-6 shadow-(--shadow-card)"
         >
           <label className="block text-xs font-medium text-(--muted)">
-            E-mail (pode ser fictício, cadastrado no Supabase Auth)
+            E-mail
             <input
               type="email"
               autoComplete="username"

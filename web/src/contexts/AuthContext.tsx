@@ -11,34 +11,60 @@ import type { Session } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
 import { T } from "../lib/db/catalog";
 
+type ProfileRow = {
+  role: string;
+  display_name: string | null;
+};
+
 type AuthContextValue = {
   session: Session | null;
   isAdmin: boolean;
+  /** Nome em app_profiles.display_name (histórico / UI). */
+  displayName: string | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
+  /** Atualiza display_name do admin logado (RLS: própria linha). */
+  setDisplayName: (name: string) => Promise<{ error: string | null }>;
+  refreshProfile: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-async function loadIsAdmin(userId: string | undefined): Promise<boolean> {
-  if (!userId) return false;
+async function loadProfile(
+  userId: string | undefined,
+): Promise<{ isAdmin: boolean; displayName: string | null }> {
+  if (!userId) return { isAdmin: false, displayName: null };
   const { data, error } = await supabase
     .from(T.app_profiles)
-    .select("role")
+    .select("role, display_name")
     .eq("id", userId)
     .maybeSingle();
-  if (error || !data) return false;
-  return data.role === "admin";
+  if (error || !data) return { isAdmin: false, displayName: null };
+  const row = data as ProfileRow;
+  return {
+    isAdmin: row.role === "admin",
+    displayName: row.display_name?.trim() || null,
+  };
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [displayName, setDisplayNameState] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const refreshAdmin = useCallback(async (userId: string | undefined) => {
-    setIsAdmin(await loadIsAdmin(userId));
+  const refreshProfile = useCallback(async () => {
+    const uid = (await supabase.auth.getSession()).data.session?.user?.id;
+    const p = await loadProfile(uid);
+    setIsAdmin(p.isAdmin);
+    setDisplayNameState(p.displayName);
+  }, []);
+
+  const applyUserId = useCallback(async (userId: string | undefined) => {
+    const p = await loadProfile(userId);
+    setIsAdmin(p.isAdmin);
+    setDisplayNameState(p.displayName);
   }, []);
 
   useEffect(() => {
@@ -46,7 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void supabase.auth.getSession().then(({ data: { session: s } }) => {
       if (cancelled) return;
       setSession(s);
-      void refreshAdmin(s?.user.id).then(() => {
+      void applyUserId(s?.user.id).then(() => {
         if (!cancelled) setLoading(false);
       });
     });
@@ -54,13 +80,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, s) => {
       setSession(s);
-      void refreshAdmin(s?.user.id);
+      void applyUserId(s?.user.id);
     });
     return () => {
       cancelled = true;
       subscription.unsubscribe();
     };
-  }, [refreshAdmin]);
+  }, [applyUserId]);
 
   const signIn = useCallback(async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({
@@ -74,15 +100,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
   }, []);
 
+  const setDisplayName = useCallback(async (name: string) => {
+    const uid = (await supabase.auth.getSession()).data.session?.user?.id;
+    if (!uid) return { error: "Sessão inválida." };
+    const trimmed = name.trim();
+    const { error } = await supabase
+      .from(T.app_profiles)
+      .update({ display_name: trimmed || null })
+      .eq("id", uid);
+    if (!error) setDisplayNameState(trimmed || null);
+    return { error: error?.message ?? null };
+  }, []);
+
   const value = useMemo(
     () => ({
       session,
       isAdmin,
+      displayName,
       loading,
       signIn,
       signOut,
+      setDisplayName,
+      refreshProfile,
     }),
-    [session, isAdmin, loading, signIn, signOut],
+    [
+      session,
+      isAdmin,
+      displayName,
+      loading,
+      signIn,
+      signOut,
+      setDisplayName,
+      refreshProfile,
+    ],
   );
 
   return (

@@ -140,6 +140,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
+/** Hook do mesmo módulo que o Provider — padrão habitual de Context API. */
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext);
   if (!ctx) {

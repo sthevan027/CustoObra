@@ -6,6 +6,7 @@ import { replaceItemActualWithManualTotal } from "../lib/costs";
 import { getErrorMessage } from "../lib/supabaseError";
 import { compareGroup, compareItemCode } from "../lib/sort";
 import { statusLabelPt } from "../lib/statusLabels";
+import { useAuth } from "../contexts/AuthContext";
 
 type Activity = {
   item_id: number;
@@ -33,6 +34,9 @@ type Breakdown = {
 };
 
 export function Visual() {
+  const { isAdmin } = useAuth();
+  const canEdit = isAdmin;
+
   const [activities, setActivities] = useState<Activity[]>([]);
   const [breakdown, setBreakdown] = useState<Breakdown[]>([]);
   const [err, setErr] = useState<string | null>(null);
@@ -104,6 +108,7 @@ export function Visual() {
   }, [load]);
 
   async function savePlanned(itemId: number, raw: string) {
+    if (!canEdit) return;
     const v = parseBRLInput(raw);
     if (v == null || v < 0) {
       setErr("Valor previsto inválido.");
@@ -124,6 +129,7 @@ export function Visual() {
   }
 
   async function saveActual(itemId: number, raw: string) {
+    if (!canEdit) return;
     const v = parseBRLInput(raw);
     if (v == null || v < 0) {
       setErr("Valor real inválido.");
@@ -143,7 +149,7 @@ export function Visual() {
   }
 
   async function saveSubgroupName(subgroupId: number | null, raw: string) {
-    if (subgroupId == null) return;
+    if (!canEdit || subgroupId == null) return;
     setSaving(`sg-${subgroupId}`);
     setErr(null);
     const { error } = await supabase
@@ -179,11 +185,20 @@ export function Visual() {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-(--text)">
-            Visualizador
-          </h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-2xl font-semibold tracking-tight text-(--text)">
+              Visualizador
+            </h1>
+            {!canEdit && (
+              <span className="rounded-full border border-(--border) bg-(--app-bg) px-2.5 py-0.5 text-xs font-medium text-(--muted)">
+                Só leitura
+              </span>
+            )}
+          </div>
           <p className="mt-1 text-sm text-(--muted)">
-            Ajuste rápido de previsto/real e nomes de subgrupo por item.
+            {canEdit
+              ? "Ajuste rápido de previsto/real e nomes de subgrupo por item."
+              : "Consulta dos totais previstos e reais e dos subgrupos por item. Alterações só para administrador."}
           </p>
         </div>
 
@@ -253,6 +268,7 @@ export function Visual() {
                       <td className="border-b border-(--border) px-2 py-2 text-right align-top">
                         <InlineMoney
                           defaultValue={act.planned_value}
+                          readOnly={!canEdit}
                           disabled={!!saving}
                           onSave={(v) => savePlanned(act.item_id, v)}
                         />
@@ -260,6 +276,7 @@ export function Visual() {
                       <td className="border-b border-(--border) px-2 py-2 text-right align-top">
                         <InlineMoney
                           defaultValue={act.actual_value}
+                          readOnly={!canEdit}
                           disabled={!!saving}
                           onSave={(v) => saveActual(act.item_id, v)}
                         />
@@ -281,26 +298,32 @@ export function Visual() {
                           </div>
                           <div className="mt-0.5 flex flex-wrap items-center gap-2">
                             <span className="text-(--muted)">Sub:</span>
-                            <input
-                              defaultValue={r.subgroup_name ?? ""}
-                              className="max-w-70 flex-1 rounded border border-(--border) bg-(--card) px-2 py-1 text-sm"
-                              disabled={r.subgroup_id == null || !!saving}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  e.currentTarget.blur();
-                                }
-                              }}
-                              onBlur={(e) => {
-                                const nv = e.target.value.trim();
-                                if (
-                                  nv &&
-                                  nv !== (r.subgroup_name ?? "") &&
-                                  r.subgroup_id
-                                ) {
-                                  void saveSubgroupName(r.subgroup_id, nv);
-                                }
-                              }}
-                            />
+                            {canEdit ? (
+                              <input
+                                defaultValue={r.subgroup_name ?? ""}
+                                className="max-w-70 flex-1 rounded border border-(--border) bg-(--card) px-2 py-1 text-sm"
+                                disabled={r.subgroup_id == null || !!saving}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    e.currentTarget.blur();
+                                  }
+                                }}
+                                onBlur={(e) => {
+                                  const nv = e.target.value.trim();
+                                  if (
+                                    nv &&
+                                    nv !== (r.subgroup_name ?? "") &&
+                                    r.subgroup_id
+                                  ) {
+                                    void saveSubgroupName(r.subgroup_id, nv);
+                                  }
+                                }}
+                              />
+                            ) : (
+                              <span className="text-sm text-(--text)">
+                                {(r.subgroup_name ?? "").trim() || "—"}
+                              </span>
+                            )}
                           </div>
                           <div className="mt-1 text-xs text-(--muted) line-clamp-2">
                             {r.item_name}
@@ -309,6 +332,7 @@ export function Visual() {
                         <td className="border-b border-(--border) px-2 py-1.5 text-right align-top">
                           <InlineMoney
                             defaultValue={r.planned_value}
+                            readOnly={!canEdit}
                             disabled={!!saving}
                             onSave={(v) => savePlanned(r.item_id, v)}
                           />
@@ -316,6 +340,7 @@ export function Visual() {
                         <td className="border-b border-(--border) px-2 py-1.5 text-right align-top">
                           <InlineMoney
                             defaultValue={r.actual_value}
+                            readOnly={!canEdit}
                             disabled={!!saving}
                             onSave={(v) => saveActual(r.item_id, v)}
                           />
@@ -338,10 +363,12 @@ export function Visual() {
 
 function InlineMoney({
   defaultValue,
+  readOnly,
   disabled,
   onSave,
 }: {
   defaultValue: number;
+  readOnly?: boolean;
   disabled: boolean;
   onSave: (raw: string) => void;
 }) {
@@ -350,6 +377,14 @@ function InlineMoney({
   useEffect(() => {
     setVal(formatBRL(defaultValue));
   }, [defaultValue]);
+
+  if (readOnly) {
+    return (
+      <span className="inline-block min-w-30 text-right text-sm tabular-nums text-(--text)">
+        {formatBRL(defaultValue)}
+      </span>
+    );
+  }
 
   return (
     <div className="flex flex-col items-end gap-1 sm:flex-row sm:items-center sm:justify-end">

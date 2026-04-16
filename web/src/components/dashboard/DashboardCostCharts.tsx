@@ -5,6 +5,7 @@ import {
   buildCostDistributionQuad,
   buildEquipmentHorizontalSeries,
   buildFornecimentoHorizontalSeries,
+  buildMaquinasPesadasHorizontalSeries,
   buildMaterialHorizontalSeries,
 } from "../../lib/dashboardSubgroupChartBuckets";
 import { formatBRL, formatBRLAxis } from "../../lib/money";
@@ -239,7 +240,11 @@ function BarTrackCenterLabel({ value }: { value: number }) {
   );
 }
 
-type HorizontalBreakdownView = "equipment" | "material" | "fornecimento";
+type HorizontalBreakdownView =
+  | "equipment"
+  | "maquinas_pesadas"
+  | "material"
+  | "fornecimento";
 
 function HorizontalCostBreakdownCard({
   rows,
@@ -252,7 +257,8 @@ function HorizontalCostBreakdownCard({
 }) {
   /** Escala pelo maior valor entre previsto e realizado (evita eixo R$ 0–1). */
   const maxVal = useMemo(() => {
-    const nums = rows.flatMap((r) => [
+    const dataRows = rows.filter((r) => r.kind !== "section");
+    const nums = dataRows.flatMap((r) => [
       Number(r.planned_value),
       Number(r.actual_value),
     ]);
@@ -268,9 +274,11 @@ function HorizontalCostBreakdownCard({
   const title =
     view === "equipment"
       ? "Custos por Equipamento"
-      : view === "material"
-        ? "Custos por Material"
-        : "Custos por Fornecimento";
+      : view === "maquinas_pesadas"
+        ? "Custos por máquinas pesadas"
+        : view === "material"
+          ? "Custos por Material"
+          : "Custos por Fornecimento";
 
   return (
     <div className="flex h-full flex-col rounded-xl border border-(--border) bg-(--card) p-5 shadow-(--shadow-card)">
@@ -293,6 +301,17 @@ function HorizontalCostBreakdownCard({
             }
           >
             Equipamento
+          </button>
+          <button
+            type="button"
+            onClick={() => onViewChange("maquinas_pesadas")}
+            className={
+              view === "maquinas_pesadas"
+                ? "rounded-md bg-white/10 px-2.5 py-1 text-[11px] font-medium text-(--text) shadow-sm ring-1 ring-white/10 sm:px-3 sm:text-xs"
+                : "rounded-md px-2.5 py-1 text-[11px] font-medium text-(--muted) transition hover:text-(--text) sm:px-3 sm:text-xs"
+            }
+          >
+            Máquinas pesadas
           </button>
           <button
             type="button"
@@ -334,15 +353,16 @@ function HorizontalCostBreakdownCard({
           <span>Realizado</span>
         </span>
       </div>
-
       <div className="mt-4 min-h-0 flex-1">
         {maxVal <= 0 ? (
           <p className="text-sm text-(--muted)">
             {view === "equipment"
               ? "Sem valores de equipamento para exibir."
-              : view === "material"
-                ? "Sem valores de materiais para exibir."
-                : "Sem valores de fornecimento para exibir."}
+              : view === "maquinas_pesadas"
+                ? "Sem valores de máquinas pesadas para exibir."
+                : view === "material"
+                  ? "Sem valores de materiais para exibir."
+                  : "Sem valores de fornecimento para exibir."}
           </p>
         ) : (
           <>
@@ -356,6 +376,20 @@ function HorizontalCostBreakdownCard({
 
             <div className="space-y-4" key={view}>
               {rows.map((r) => {
+                if (r.kind === "section") {
+                  return (
+                    <div
+                      key={`${view}-${r.id}`}
+                      className="border-t border-(--border) pt-4"
+                      role="separator"
+                      aria-label={r.label}
+                    >
+                      <p className="text-[11px] font-semibold tracking-wide text-(--muted) uppercase">
+                        {r.label}
+                      </p>
+                    </div>
+                  );
+                }
                 const planned = Number(r.planned_value);
                 const actual = Number(r.actual_value);
                 const wAct = maxVal > 0 ? (actual / maxVal) * 100 : 0;
@@ -448,6 +482,11 @@ export function DashboardCostCharts({ subgroups }: Props) {
     [subgroups],
   );
 
+  const maquinasPesadasRows = useMemo(
+    () => buildMaquinasPesadasHorizontalSeries(subgroups),
+    [subgroups],
+  );
+
   const materialRows = useMemo(
     () => buildMaterialHorizontalSeries(subgroups),
     [subgroups],
@@ -461,13 +500,18 @@ export function DashboardCostCharts({ subgroups }: Props) {
   const horizontalRows =
     horizontalView === "equipment"
       ? equipRows
-      : horizontalView === "material"
-        ? materialRows
-        : fornecimentoRows;
+      : horizontalView === "maquinas_pesadas"
+        ? maquinasPesadasRows
+        : horizontalView === "material"
+          ? materialRows
+          : fornecimentoRows;
 
   const hasAny =
     dist.mo + dist.eq + dist.mat + dist.forn > 0 ||
     equipRows.some(
+      (r) => Number(r.actual_value) > 0 || Number(r.planned_value) > 0,
+    ) ||
+    maquinasPesadasRows.some(
       (r) => Number(r.actual_value) > 0 || Number(r.planned_value) > 0,
     ) ||
     materialRows.some(

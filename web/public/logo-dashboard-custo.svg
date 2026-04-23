@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">Dashboard Custo</title>
+  <defs>
+    <linearGradient id="dc-bg" x1="8" y1="4" x2="56" y2="60" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0b1220"/>
+      <stop offset="1" stop-color="#15243d"/>
+    </linearGradient>
+    <linearGradient id="dc-fill" x1="12" y1="48" x2="44" y2="16" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#22d3ee"/>
+      <stop offset="1" stop-color="#3b82f6"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="15" fill="url(#dc-bg)"/>
+  <!-- Barras: realizado vs. base (tema controlo de custo) -->
+  <rect x="14" y="36" width="8" height="12" rx="2" fill="url(#dc-fill)" opacity="0.45"/>
+  <rect x="28" y="28" width="8" height="20" rx="2" fill="url(#dc-fill)" opacity="0.72"/>
+  <rect x="42" y="18" width="8" height="30" rx="2" fill="url(#dc-fill)"/>
+  <!-- Linha de orçamento / eixo -->
+  <line x1="10" y1="50" x2="54" y2="50" stroke="#3d4f6f" stroke-width="2.2" stroke-linecap="round"/>
+  <!-- Ponto: meta ou alerta -->
+  <circle cx="46" cy="14" r="4" fill="#fbbf24"/>
+</svg>

@@ -1,5 +1,7 @@
 # Dashboard Custo
 
+![Status](https://img.shields.io/badge/status-em%20produ%C3%A7%C3%A3o-success)
+
 Dashboard de custos (orçado × realizado) com frontend em React/Vite e backend em **Supabase** (PostgreSQL + PostgREST).
 
 **Modo padrão (offline):** sem variáveis de ambiente a app usa **dados simulados** e login de teste (`demo@dashboardcusto.local` / `demonstracao`, configurável em `VITE_DEMO_EMAIL` e `VITE_DEMO_PASSWORD`). Para **ligar o Supabase**, crie `web/.env` com `VITE_STANDALONE=0` e as chaves; veja `web/.env.example`.

@@ -1,8 +1,16 @@
-# Dashboard Custo
+# CustoObra — Gestão de custos de obra
 
 ![Status](https://img.shields.io/badge/status-em%20produ%C3%A7%C3%A3o-success)
 
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black) ![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white) ![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&logoColor=white) ![Tailwind](https://img.shields.io/badge/Tailwind-4-06B6D4?logo=tailwindcss&logoColor=white) ![Supabase](https://img.shields.io/badge/Supabase-3FCF8E?logo=supabase&logoColor=white) ![pnpm](https://img.shields.io/badge/pnpm-9-F69220?logo=pnpm&logoColor=white)
+
+## 🚀 Evolução: de dashboard de custos para gestão de obra
+
+**De → Para:** de painel orçado × realizado para controle ativo de obra com alertas.
+
+**Novas funcionalidades:** curva S e alertas de estouro por centro de custo; lançamento de custos reais vinculado ao orçamento; integração opcional com o ObraTrack para consumo de materiais.
+
+**Mudanças na lógica:** o foco passa de visualização para acompanhamento ativo (alertas); modelo orçamento ↔ realizado por centro de custo; base para fusão com o ObraTrack num produto único de obra.
 
 Dashboard de custos (orçado × realizado) com frontend em React/Vite e backend em **Supabase** (PostgreSQL + PostgREST).
 
